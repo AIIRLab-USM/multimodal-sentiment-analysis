@@ -1,0 +1,10 @@
+aac_metrics==0.5.5
+bert_score==0.3.13
+pandas==2.2.3
+Pillow==9.0.1
+Pillow==11.2.0
+Requests==2.32.3
+scikit_learn==1.6.1
+torch==2.2.0
+tqdm==4.67.1
+transformers==4.50.2
