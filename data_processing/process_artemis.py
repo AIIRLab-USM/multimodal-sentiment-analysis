@@ -1,4 +1,5 @@
 import os
+import unicodedata
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -56,7 +57,7 @@ def main():
 
     # Generate local image paths of WikiArt pieces
     new["local_image_path"] = artemis_df.apply(
-        lambda row: os.path.join("../wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
+        lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
     )
 
     # Label train, eval, test
