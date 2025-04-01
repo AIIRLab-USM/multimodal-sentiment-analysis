@@ -1,0 +1,9 @@
+# created by virtualenv automatically
+artpedia/
+wikiart/
+
+original_data/
+processed_data/
+caption_data/
+
+experiment_results/
