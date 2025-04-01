@@ -135,7 +135,7 @@ def main():
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()
-    cap_gen.from_csv(in_path, out_path, batch_size=24)
+    cap_gen.from_csv(in_path, out_path, batch_size=16) # Adjust to GPU (VRAM) capacity
 
 if __name__ == "__main__":
     # Use this block for testing
