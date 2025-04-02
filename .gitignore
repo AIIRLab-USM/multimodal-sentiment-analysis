@@ -2,11 +2,17 @@
 .venv/
 backup/
 
+# Image folders
 artpedia/
 wikiart/
 
+# Data folders
 original_data/
 processed_data/
 caption_data/
 
+# Experiment data
 experiment_results/
+
+# File for small, one-time use scripts
+test.py

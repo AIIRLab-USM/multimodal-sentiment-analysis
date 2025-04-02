@@ -12,7 +12,7 @@ def main():
         print("Missing custom Artpedia file - Use 'process_artpedia.py' first.")
         return
 
-    os.makedirs('artpedia', exist_ok=True)
+    os.makedirs('../artpedia', exist_ok=True)
 
     unavailable_indices = []
     with (tqdm(total=len(ap_df)) as pbar):

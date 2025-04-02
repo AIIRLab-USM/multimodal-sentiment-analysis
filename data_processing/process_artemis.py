@@ -53,7 +53,8 @@ def main():
         return
 
     # Extract necessary data to new DataFrame
-    new = artemis_df[["painting", "emotion"]].copy()
+    new = artemis_df[["emotion"]].copy()
+    new = new.rename(columns={"emotion": "label"})
 
     # Generate local image paths of WikiArt pieces
     new["local_image_path"] = artemis_df.apply(
@@ -71,7 +72,7 @@ def main():
     new = pd.concat([train_df, eval_df, test_df])
 
     # Reorder columns (Author's personal preference), remove "painting"
-    new = new[["local_image_path", "split", "emotion"]]
+    new = new[["local_image_path", "split", "label"]]
 
     # Save generated data to a new CSV file
     try:
