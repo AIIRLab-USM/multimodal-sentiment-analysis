@@ -8,8 +8,9 @@ wikiart/
 
 # Data folders
 original_data/
-processed_data/
+custom_data/
 caption_data/
+processed_data/
 
 # Experiment data
 experiment_results/
