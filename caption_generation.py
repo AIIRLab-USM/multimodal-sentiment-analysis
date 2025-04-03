@@ -104,15 +104,15 @@ class CaptionGenerator:
             new_df["caption"].isna() | (new_df["caption"] == ""), "local_image_path"].unique().tolist()
 
         img_dataset = ImageDataset(img_paths)
-        dataloader = DataLoader(img_dataset, batch_size=batch_size, num_workers=4, pin_memory=True,
-                                collate_fn=lambda x: x)
+        dataloader = DataLoader(img_dataset, batch_size=batch_size, num_workers=4, pin_memory=True)
 
         progress_bar = tqdm(
             total=len(img_dataset),
             desc="Generating captions"
         )
 
-        for batch_images, batch_paths in zip(dataloader, [img_paths[i:i + batch_size] for i in range(0, len(img_paths), batch_size)]):
+        for batch in dataloader:
+            batch_images, batch_paths = zip(*batch)
             outputs = self.pipe(images=batch_images,
                                 text=[prompt] * len(batch_images),
                                 generate_kwargs={"max_new_tokens": self.max_new_tokens}
@@ -137,8 +137,8 @@ def main():
     process_artemis.main()
 
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = f"custom_data{os.path.sep}custom_artemis.csv"
-    out_path = f"caption_data{os.path.sep}artemis_captions.csv"
+    in_path = f"data{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
+    out_path = f"data{os.path.sep}caption_data{os.path.sep}mistica_dataset.csv"
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()

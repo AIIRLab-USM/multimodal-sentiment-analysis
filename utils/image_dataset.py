@@ -22,5 +22,5 @@ class ImageDataset(torch.utils.data.Dataset):
             new_size = (int(width*scale), int(height*scale))
             img = img.resize(new_size, Image.LANCZOS)
 
-        return img
+        return img, self.img_paths[index]
 
