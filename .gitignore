@@ -1,6 +1,7 @@
 # created by virtualenv automatically
 .venv/
-backup/
+.idea/
+*/__pycache__/
 
 # Image folders
 artpedia/
