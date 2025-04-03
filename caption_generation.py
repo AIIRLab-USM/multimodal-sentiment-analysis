@@ -4,8 +4,12 @@ import os
 from tqdm import tqdm
 from transformers import BitsAndBytesConfig
 from transformers import pipeline
+
+from data_customization import process_artemis
 from utils.image_dataset import ImageDataset
 from torch.utils.data import DataLoader
+
+import data_customization.process_artemis
 
 # Local variable set to allow larger batch sizes on the local device
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
@@ -129,8 +133,11 @@ class CaptionGenerator:
 
 
 def main():
+    # Generate proper data file
+    process_artemis.main()
+
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = f"processed_data{os.path.sep}custom_artemis.csv"
+    in_path = f"custom_data{os.path.sep}custom_artemis.csv"
     out_path = f"caption_data{os.path.sep}artemis_captions.csv"
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")

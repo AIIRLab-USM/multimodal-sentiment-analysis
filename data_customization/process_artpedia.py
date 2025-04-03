@@ -5,7 +5,7 @@ import os
 
 INPUT_FILE = f"..{os.path.sep}original_data{os.path.sep}artpedia.json"
 
-OUTPUT_FILE = f"..{os.path.sep}processed_data{os.path.sep}custom_artpedia.csv"
+OUTPUT_FILE = f"..{os.path.sep}custom_data{os.path.sep}custom_artpedia.csv"
 
 def main():
     # Open input file
