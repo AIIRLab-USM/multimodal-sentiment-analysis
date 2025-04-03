@@ -4,7 +4,10 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
 class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, img_paths):
+    def __init__(self, img_paths:str | list[str]):
+        if isinstance(img_paths, str):
+            img_paths = [img_paths]
+
         self.img_paths = img_paths
 
     def __len__(self):

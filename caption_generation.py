@@ -32,7 +32,7 @@ class CaptionGenerator:
 
 
     def __call__(self,
-                 data,
+                 data: str | list[str],
                  prompt="USER: <image>\nCaption this image\nASSISTANT:",
                  batch_size=16):
         """
