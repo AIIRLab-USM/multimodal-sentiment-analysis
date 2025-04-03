@@ -3,14 +3,14 @@ import os
 
 os.environ['OPENCV_IO_MAX_IMAGE_PIXELS'] = pow(2, 40).__str__()
 
-IN_PATH = f"processed_data{os.path.sep}custom_artpedia.csv"
+IN_PATH = f"data{os.path.sep}processed_data{os.path.sep}custom_artpedia.csv"
 
 OUT_PATHS = [
-        f"caption_data{os.path.sep}prompt_eng{os.path.sep}zero-shot_artpedia-captions.csv",
-        f"caption_data{os.path.sep}prompt_eng{os.path.sep}one-shot_artpedia-captions.csv",
-        f"caption_data{os.path.sep}prompt_eng{os.path.sep}few-shot_artpedia-captions.csv",
-        f"caption_data{os.path.sep}prompt_eng{os.path.sep}multimodal-cot_artpedia-captions.csv",
-        f"caption_data{os.path.sep}prompt_eng{os.path.sep}self-consistency_artpedia-captions.csv"
+        f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}zero-shot_artpedia-captions.csv",
+        f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}one-shot_artpedia-captions.csv",
+        f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}few-shot_artpedia-captions.csv",
+        f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}multimodal-cot_artpedia-captions.csv",
+        f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}self-consistency_artpedia-captions.csv"
     ]
 
 PROMPTS = [

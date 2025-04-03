@@ -8,14 +8,11 @@ __pycache__/
 artpedia/
 wikiart/
 
-# Data folders
-original_data/
-custom_data/
-caption_data/
-processed_data/
+# All data
+data/
 
 # Experiment data
-experiment_results/
+data/experiment_results/
 
 # File for small, one-time use scripts
 test.py

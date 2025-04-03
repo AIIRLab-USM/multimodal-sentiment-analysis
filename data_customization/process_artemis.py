@@ -23,9 +23,9 @@ Contact: clayton.durepos@maine.edu
 """
 
 # Default ArtEmis dataset filename
-INPUT_FILE = f"..{os.path.sep}original_data{os.path.sep}artemis_dataset_release_v0.csv"
+INPUT_FILE = f"..{os.path.sep}data{os.path.sep}original_data{os.path.sep}artemis_dataset_release_v0.csv"
 
-OUTPUT_FILE = f"..{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
+OUTPUT_FILE = f"..{os.path.sep}data{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
 
 TRAIN_RATIO = 0.7
 EVAL_RATIO = 0.2

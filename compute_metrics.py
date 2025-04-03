@@ -9,11 +9,11 @@ import torch
 import os
 
 caption_data = [
-    f"caption_data{os.path.sep}prompt_eng{os.path.sep}zero-shot_artpedia-captions.csv",
-    f"caption_data{os.path.sep}prompt_eng{os.path.sep}one-shot_artpedia-captions.csv",
-    f"caption_data{os.path.sep}prompt_eng{os.path.sep}few-shot_artpedia-captions.csv",
-    f"caption_data{os.path.sep}prompt_eng{os.path.sep}multimodal-cot_artpedia-captions.csv",
-    f"caption_data{os.path.sep}prompt_eng{os.path.sep}self-consistency_artpedia-captions.csv"
+    f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}zero-shot_artpedia-captions.csv",
+    f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}one-shot_artpedia-captions.csv",
+    f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}few-shot_artpedia-captions.csv",
+    f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}multimodal-cot_artpedia-captions.csv",
+    f"data{os.path.sep}caption_data{os.path.sep}prompt_eng{os.path.sep}self-consistency_artpedia-captions.csv"
 ]
 
 simple_df = pd.DataFrame(columns=["technique", "BERTscore",
@@ -57,7 +57,7 @@ with (tqdm(desc="Computing metrics", total=len(caption_data)) as pbar):
 
         pbar.update(1)
 
-    simple_df.to_csv(f"experiment_results{os.path.sep}prompt_eng{os.path.sep}simple_results.json")
+    simple_df.to_csv(f"data{os.path.sep}experiment_results{os.path.sep}prompt_eng{os.path.sep}simple_results.json")
 
 with (tqdm(desc="Analyzing metrics", total=len(caption_data)) as pbar):
     for path in caption_data:
