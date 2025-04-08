@@ -9,7 +9,6 @@ from data_customization import process_artemis
 from utils.image_dataset import ImageDataset
 from torch.utils.data import DataLoader
 
-import data_customization.process_artemis
 
 # Local variable set to allow larger batch sizes on the local device
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
