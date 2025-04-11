@@ -1,6 +1,6 @@
 import os
-import unicodedata
 import pandas as pd
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 """
@@ -25,11 +25,33 @@ Contact: clayton.durepos@maine.edu
 # Default ArtEmis dataset filename
 INPUT_FILE = f"..{os.path.sep}data{os.path.sep}original_data{os.path.sep}artemis_dataset_release_v0.csv"
 
-OUTPUT_FILE = f"..{os.path.sep}data{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
+OUTPUT_FILE = f"..{os.path.sep}data{os.path.sep}custom_data{os.path.sep}temp_artemis.csv"
+
+LABEL_MAP = {
+    'amusement': 0,
+    'anger': 1,
+    'awe': 2,
+    'contentment': 3,
+    'disgust': 4,
+    'excitement': 5,
+    'fear': 6,
+    'sadness': 7,
+    'something else': 8
+}
 
 TRAIN_RATIO = 0.7
 EVAL_RATIO = 0.2
 TEST_RATIO = 0.1
+
+tqdm.pandas()
+
+def mhvect(instance_labels, label_map, total_labels):
+    vect = [0] * total_labels
+    for label in instance_labels:
+        if label in label_map:
+            vect[label_map[label]] = 1
+
+    return vect
 
 def main():
     """
@@ -52,13 +74,21 @@ def main():
         print(f"Error reading {INPUT_FILE} : {e}")
         return
 
-    # Extract necessary data to new DataFrame
-    new = artemis_df[["emotion"]].copy()
-    new = new.rename(columns={"emotion": "label"})
-
-    # Generate local image paths of WikiArt pieces
-    new["local_image_path"] = artemis_df.apply(
+    # Generate image paths for temporary use
+    artemis_df['local_image_path']  = artemis_df.progress_apply(
         lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
+    )
+
+    # Customized DF
+    new = artemis_df[["local_image_path"]].copy()
+
+    # Keep only unique images
+    new = new.drop_duplicates(subset='local_image_path')
+
+    # Generate Multi-Hot Vectors (Used for Multi-Label Classification)
+    new['label_vector'] = new.progress_apply(
+        lambda row: mhvect(artemis_df.loc[artemis_df['local_image_path'] == row['local_image_path']]['emotion'].unique().tolist(), LABEL_MAP, 9),
+        axis=1
     )
 
     # Label train, eval, test
@@ -72,7 +102,7 @@ def main():
     new = pd.concat([train_df, eval_df, test_df])
 
     # Reorder columns (Author's personal preference), remove "painting"
-    new = new[["local_image_path", "split", "label"]]
+    new = new[["local_image_path", "split", "label_vector"]]
 
     # Save generated data to a new CSV file
     try:
