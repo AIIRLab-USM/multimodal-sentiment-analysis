@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 from tqdm import tqdm
 from datasets import Dataset
-from custom_models import *
+from classification_models import *
 from transformers import Trainer, TrainingArguments, AutoTokenizer
 
 """

@@ -3,7 +3,7 @@ import pandas as pd
 from PIL import Image
 from datasets import Dataset
 from transformers import Trainer, TrainingArguments
-from custom_models import *
+from classification_models import *
 from transformers import AutoImageProcessor
 
 """
