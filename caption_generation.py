@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 import os
 from tqdm import tqdm
+from PIL import Image
 from transformers import BitsAndBytesConfig
 from transformers import pipeline
 
@@ -36,46 +37,31 @@ class CaptionGenerator:
 
     def __call__(self,
                  data: str | list[str],
-                 prompt="USER: <image>\nCaption this image\nASSISTANT:",
-                 batch_size=16):
+                 prompt="USER: <image>\nCaption this image\nASSISTANT:"):
         """
         Generates captions for an image or a list of images
 
         Args:
             data (str | list):  A single image path or a list of image paths
-            batch_size (int):   The number of images to be processed and captioned at a time
 
         Returns:
             A list of captions generated for image(s) provided
         """
-        captions = []
 
         if isinstance(data, str):
             data = [data]
 
-        img_dataset = ImageDataset(data)
-        dataloader = DataLoader(img_dataset, batch_size=batch_size, num_workers=4, persistent_workers=False, shuffle=True, collate_fn=lambda x: x)
+        images = [Image.open(path) for path in data]
+        outputs = self.pipe(images=images, text=[prompt] * len(images),
+                            generate_kwargs={"max_new_tokens": self.max_new_tokens})
 
-        progress_bar = tqdm(
-            total=len(img_dataset),
-            desc="Generating captions"
-        )
-
-        for batch_images in dataloader:
-            outputs = self.pipe(images=batch_images, text=[prompt] * len(batch_images),
-                                generate_kwargs={"max_new_tokens": self.max_new_tokens})
-
-            batch_captions = [output["generated_text"].replace(prompt, "") for output in outputs]
-            captions.extend(batch_captions)
-
-            progress_bar.update(len(batch_images))
-
+        captions = [output["generated_text"].replace(prompt, "") for output in outputs]
         return captions
 
 
     def from_csv(self,
                           in_path,
-                          out_path=None,
+                          out_path,
                           prompt="USER: <image>\nCaption this painting\nASSISTANT:",
                           batch_size=16):
         """
@@ -88,7 +74,6 @@ class CaptionGenerator:
             batch_size (int):  The number of images to be processed and captioned at a time
         """
         df = pd.read_csv(in_path)
-        captions = []
 
         if "local_image_path" not in df.columns:
             raise ValueError("CSV file must have 'local_image_path' column")
@@ -102,42 +87,23 @@ class CaptionGenerator:
         img_paths = new_df.loc[
             new_df["caption"].isna() | (new_df["caption"] == ""), "local_image_path"].unique().tolist()
 
-        img_dataset = ImageDataset(img_paths)
-        dataloader = DataLoader(img_dataset, batch_size=batch_size, num_workers=4, pin_memory=True)
+        for i in tqdm(range(0, len(img_paths), batch_size), desc="Generating captions"):
+            batch_paths = img_paths[i:i + batch_size]
+            captions = self(
+                data=batch_paths,
+                prompt=prompt
+            )
 
-        progress_bar = tqdm(
-            total=len(img_dataset),
-            desc="Generating captions"
-        )
+            for path, caption in zip(batch_paths, captions):
+                new_df.loc[new_df["local_image_path"] == path, "caption"] = caption
 
-        for batch in dataloader:
-            batch_images, batch_paths = zip(*batch)
-            outputs = self.pipe(images=batch_images,
-                                text=[prompt] * len(batch_images),
-                                generate_kwargs={"max_new_tokens": self.max_new_tokens}
-                                )
-
-            batch_captions = [output["generated_text"].replace(prompt, "") for output in outputs]
-            captions.extend(batch_captions)
-
-            for img_path, caption in zip(batch_paths, batch_captions):
-                new_df.loc[new_df["local_image_path"] == img_path, "caption"] = caption
-
-            if out_path:
-                new_df.to_csv(out_path, index=False)
-            progress_bar.update(len(batch_images))
-
-        if not out_path:
-            print(captions)
+            new_df.to_csv(out_path, index=False)
 
 
 def main():
-    # Generate proper data file
-    process_artemis.main()
-
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
     in_path = f"data{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
-    out_path = f"data{os.path.sep}caption_data{os.path.sep}mistica_dataset.csv"
+    out_path = f"data{os.path.sep}temp_multimodal_sentiment_dataset.csv"
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()
