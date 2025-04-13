@@ -16,9 +16,10 @@ Original dataset available at: https://artemisdataset.org/#dataset
 This Python script processes the ArtEmis dataset by:
     1. Extracting relevant columns
     2. Generate local file paths for associated WikiArt images
-    3. Save generated CapIma dataset to a new CSV file
+    3. Save generated dataset to a new CSV file
     
 Author: Clayton Durepos
+Version: 04.11.2025
 Contact: clayton.durepos@maine.edu
 """
 

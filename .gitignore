@@ -5,14 +5,10 @@ __pycache__/
 */__pycache__/
 
 # Image folders
-artpedia/
 wikiart/
 
 # All data
 data/
-
-# Experiment data
-data/experiment_results/
 
 # File for small, one-time use scripts
 test.py
