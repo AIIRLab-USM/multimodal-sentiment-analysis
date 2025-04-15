@@ -87,7 +87,7 @@ def main():
     new = new.drop_duplicates(subset='local_image_path')
 
     # Generate Multi-Hot Vectors (Used for Multi-Label Classification)
-    new['label_vector'] = new.progress_apply(
+    new['labels'] = new.progress_apply(
         lambda row: mhvect(artemis_df.loc[artemis_df['local_image_path'] == row['local_image_path']]['emotion'].unique().tolist(), LABEL_MAP, 9),
         axis=1
     )
@@ -103,7 +103,7 @@ def main():
     new = pd.concat([train_df, eval_df, test_df])
 
     # Reorder columns (Author's personal preference), remove "painting"
-    new = new[["local_image_path", "split", "label_vector"]]
+    new = new[["local_image_path", "split", "labels"]]
 
     # Save generated data to a new CSV file
     try:
