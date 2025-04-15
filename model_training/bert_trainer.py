@@ -1,8 +1,11 @@
+import ast
 import os
 import torch
+import evaluate
 import pandas as pd
 from tqdm import tqdm
 from datasets import Dataset
+from torch.nn import BCEWithLogitsLoss
 from classification_models import *
 from transformers import Trainer, TrainingArguments, AutoTokenizer
 
@@ -10,7 +13,7 @@ from transformers import Trainer, TrainingArguments, AutoTokenizer
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.11.2025
+Version: 04.14.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -20,10 +23,25 @@ DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
 def main():
     df = pd.read_csv(DATA_PATH)
 
-    # Get training and evaluation designated data from pre-generated dataset
-    train_data = Dataset.from_pandas(df.loc[df['split'] == 'train'][['caption', 'label_vector']]).remove_columns(['__index_level_0__'])
-    eval_data = Dataset.from_pandas(df.loc[df['split'] == 'eval'][['caption', 'label_vector']]).remove_columns(['__index_level_0__'])
+    # Train Data pre-processing
+    train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
+    train_data['labels'] = train_data.apply(
+        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        axis=1
+    )
 
+    train_data = Dataset.from_pandas(train_data).remove_columns(['__index_level_0__'])
+
+    # Evaluation Data pre-processing
+    eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
+    eval_data['labels'] = eval_data.apply(
+        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        axis=1
+    )
+
+    eval_data = Dataset.from_pandas(eval_data).remove_columns(['__index_level_0__'])
+
+    # Training loop
     for name in tqdm(MODEL_NAMES, desc="Model Number", total=len(MODEL_NAMES)):
         tokenizer = AutoTokenizer.from_pretrained(name)
         model = TextClassifier(name, 9)
@@ -66,7 +84,6 @@ def main():
         # Save
         save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
         torch.save(model, f"../models/{save_name}-classifier.pt")
-        tokenizer.save_pretrained(f"../models/{save_name}-tokenizer")
 
 if __name__ == "__main__":
     main()

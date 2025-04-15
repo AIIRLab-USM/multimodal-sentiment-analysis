@@ -1,3 +1,4 @@
+import ast
 import torch
 import pandas as pd
 from PIL import Image
@@ -10,7 +11,7 @@ from transformers import AutoImageProcessor
 A short script for fine-tuning the ViT model for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.11.2025
+Version: 04.14.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -21,16 +22,30 @@ def main():
     model = ImageClassifier(MODEL_NAME, 9)
     processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 
-    df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'label_vector']]
+    df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'labels']]
 
     # Modify image_paths to comply with directory structure
     df['local_image_path'] = df.apply(
         lambda row: '../' + row['local_image_path'], axis=1
     )
 
-    # Get training and evaluation designated data from pre-generated dataset
-    train_data = Dataset.from_pandas(df.loc[df['split'] == 'train'][['local_image_path', 'label_vector']]).remove_columns(['__index_level_0__'])
-    eval_data = Dataset.from_pandas(df.loc[df['split'] == 'eval'][['local_image_path', 'label_vector']]).remove_columns(['__index_level_0__'])
+    # Train Data pre-processing
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels']]
+    train_data['labels'] = train_data.apply(
+        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        axis=1
+    )
+
+    train_data = Dataset.from_pandas(train_data).remove_columns(['__index_level_0__'])
+
+    # Evaluation Data pre-processing
+    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'labels']]
+    eval_data['labels'] = eval_data.apply(
+        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        axis=1
+    )
+
+    eval_data = Dataset.from_pandas(eval_data).remove_columns(['__index_level_0__'])
 
     # Process images
     def process_fn(batch):
@@ -55,14 +70,13 @@ def main():
         model=model,
         args=training_args,
         train_dataset=train_data,
-        eval_dataset=eval_data,
+        eval_dataset=eval_data
     )
 
     trainer.train()
 
     # Save
     torch.save(model, f"../models/vit-classifier.pt")
-    processor.save_pretrained("../models/vit-image-processor")
 
 if __name__ == "__main__":
     main()
