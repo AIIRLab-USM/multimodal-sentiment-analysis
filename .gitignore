@@ -10,5 +10,8 @@ wikiart/
 # All data
 data/
 
+# Fine-tuned/Trained Models
+models/
+
 # File for small, one-time use scripts
 test.py
