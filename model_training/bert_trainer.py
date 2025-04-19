@@ -1,11 +1,8 @@
 import ast
 import os
-import torch
-import evaluate
 import pandas as pd
 from tqdm import tqdm
 from datasets import Dataset
-from torch.nn import BCEWithLogitsLoss
 from classification_models import *
 from transformers import Trainer, TrainingArguments, AutoTokenizer
 
@@ -13,7 +10,7 @@ from transformers import Trainer, TrainingArguments, AutoTokenizer
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.14.2025
+Version: 04.18.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -44,7 +41,7 @@ def main():
     # Training loop
     for name in tqdm(MODEL_NAMES, desc="Model Number", total=len(MODEL_NAMES)):
         tokenizer = AutoTokenizer.from_pretrained(name)
-        model = TextClassifier(name, 9)
+        model = TextClassifier(num_classes=9, base_model=name)
 
 
         # Tokenize captions

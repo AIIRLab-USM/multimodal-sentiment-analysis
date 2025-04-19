@@ -1,5 +1,4 @@
 import ast
-import torch
 import pandas as pd
 from PIL import Image
 from datasets import Dataset
@@ -11,7 +10,7 @@ from transformers import AutoImageProcessor
 A short script for fine-tuning the ViT model for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.14.2025
+Version: 04.18.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -49,7 +48,11 @@ def main():
 
     # Process images
     def process_fn(batch):
-        return processor(Image.open(batch['local_image_path']), return_tensors="pt")
+        with Image.open(batch['local_image_path']) as img:
+            return {
+                # Remove batch dimension (Will be re-added in Trainer)
+                'pixel_values': processor(images=[img], return_tensors='pt')['pixel_values'][0]
+            }
 
     train_data, eval_data = train_data.map(process_fn, batched=False), eval_data.map(process_fn, batched=False)
 
