@@ -52,6 +52,7 @@ class CaptionGenerator:
                             generate_kwargs={"max_new_tokens": self.max_new_tokens})
 
         captions = [output["generated_text"].replace(prompt, "") for output in outputs]
+        [image.close() for image in images]
         return captions
 
 
@@ -98,8 +99,8 @@ class CaptionGenerator:
 
 def main():
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = f"data{os.path.sep}custom_data{os.path.sep}custom_artemis.csv"
-    out_path = f"data{os.path.sep}temp_multimodal_sentiment_dataset.csv"
+    in_path = f"data{os.path.sep}custom_artemis.csv"
+    out_path = f"data{os.path.sep}multimodal_sentiment_dataset.csv"
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()
