@@ -4,13 +4,14 @@ import pandas as pd
 from tqdm import tqdm
 from datasets import Dataset
 from classification_models import *
-from transformers import Trainer, TrainingArguments, AutoTokenizer
+from transformers import Trainer, AutoTokenizer
+from training import compute_metrics, training_args, early_stop_callback
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.18.2025
+Version: 04.24.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -56,31 +57,24 @@ def main():
         train_data = train_data.map(tokenize_fn, batched=True)
         eval_data = eval_data.map(tokenize_fn, batched=True)
 
-        training_args = TrainingArguments(
-            output_dir="./test_trainer",
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            learning_rate=3e-5,
-            per_device_train_batch_size=32,
-            per_device_eval_batch_size=64,
-            logging_dir="./logs",
-            logging_steps=10,
-            save_total_limit=2,
-        )
+        # Adjust foundation training arguments
+        training_args.learning_rate = 2e-5      # As used in BERT - Devlin et al., NAACL 2019
 
         # Train
         trainer = Trainer(
             model=model,
             args=training_args,
+            compute_metrics=compute_metrics,
             train_dataset=train_data,
             eval_dataset=eval_data,
+            callbacks=early_stop_callback
         )
 
         trainer.train()
 
         # Save
         save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
-        torch.save(model, f"../models/{save_name}-classifier.pt")
+        torch.save(model.state_dict(), f"../models/{save_name}-new-dict.pt")
 
 if __name__ == "__main__":
     main()

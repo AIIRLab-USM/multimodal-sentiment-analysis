@@ -2,15 +2,15 @@ import ast
 import pandas as pd
 from PIL import Image
 from datasets import Dataset
-from transformers import Trainer, TrainingArguments
 from classification_models import *
-from transformers import AutoImageProcessor
+from training import training_args, compute_metrics, early_stop_callback
+from transformers import AutoImageProcessor, Trainer
 
 """
 A short script for fine-tuning the ViT model for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.18.2025
+Version: 04.24.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -18,7 +18,7 @@ DATA_PATH = '../data/multimodal_sentiment_dataset.csv'
 MODEL_NAME = 'google/vit-base-patch16-224'
 
 def main():
-    model = ImageClassifier(MODEL_NAME, 9)
+    model = ImageClassifier(base_model=MODEL_NAME, num_classes=9)
     processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 
     df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'labels']]
@@ -56,30 +56,23 @@ def main():
 
     train_data, eval_data = train_data.map(process_fn, batched=False), eval_data.map(process_fn, batched=False)
 
-    training_args = TrainingArguments(
-        output_dir="./test_trainer",
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        learning_rate=3e-5,
-        per_device_train_batch_size=32,
-        per_device_eval_batch_size=64,
-        logging_dir="./logs",
-        logging_steps=10,
-        save_total_limit=2,
-    )
+    # Adjust foundation training arguments
+    training_args.learning_rate = 1e-4  # As used in ViT, Dosovitskiy et al., ICLR 2019
 
     # Train
     trainer = Trainer(
         model=model,
         args=training_args,
+        compute_metrics=compute_metrics,
         train_dataset=train_data,
-        eval_dataset=eval_data
+        eval_dataset=eval_data,
+        callbacks=early_stop_callback
     )
 
     trainer.train()
 
     # Save
-    torch.save(model, f"../models/vit-classifier.pt")
+    torch.save(model.state_dict(), f"../models/vit-dict.pt")
 
 if __name__ == "__main__":
     main()
