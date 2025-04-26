@@ -40,8 +40,8 @@ LABEL_MAP = {
     'something else': 8
 }
 
-TRAIN_RATIO = 0.7
-EVAL_RATIO = 0.2
+TRAIN_RATIO = 0.8
+EVAL_RATIO = 0.1
 TEST_RATIO = 0.1
 
 tqdm.pandas()
