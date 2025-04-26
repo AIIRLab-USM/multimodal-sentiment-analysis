@@ -86,9 +86,9 @@ def main():
             training_args.weight_decay = 0.0
             training_args.warmup_steps = 0
         else:
-            training_args.learning_rate = 1e-5
-            training_args.weight_decay = 0.01
-            training_args.warmup_steps = 512
+            training_args.learning_rate = 1e-5      # Used for multimodal models in
+                                                    # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+                                                    # UNITER, Chan et al. ECCV 2020
 
         trainer = Trainer(
             model=model,
