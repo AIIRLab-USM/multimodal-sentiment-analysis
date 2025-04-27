@@ -13,5 +13,9 @@ data/
 # Fine-tuned/Trained Models
 models/
 
+# Training logs
+model_training/logs/
+model_training/test_trainer/
+
 # File for small, one-time use scripts
 test.py
