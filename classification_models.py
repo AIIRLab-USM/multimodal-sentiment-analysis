@@ -110,7 +110,7 @@ class UnifiedMMClassifier(nn.Module):
 
         a = torch.sigmoid(self.alpha)
         logits = self.classifier(
-            a * image_outputs.pooler_output + (1 - a) * text_outputs.pooler_output
+            a * text_outputs.pooler_output + (1 - a) * image_outputs.pooler_output
         )
 
         if labels is not None:
