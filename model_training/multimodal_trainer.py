@@ -7,8 +7,9 @@ import pandas as pd
 from PIL import Image
 from datasets import Dataset
 from classification_models import *
-from training import training_args, compute_metrics, early_stop_callback
+from torch.utils.data import Dataset
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
+from training import training_args, compute_metrics, early_stop_callback
 
 """
 A short script for fine-tuning CLIP on a multimodal sentiment classification task
@@ -27,6 +28,36 @@ model_dict = {
     'unified': UnifiedMMClassifier
 }
 
+# Custom dataset for memory efficiency
+class MMProcessingDataset(torch.utils.data.Dataset):
+    def __init__(self, df):
+        super().__init__()
+        self.df = df
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, index):
+        row = self.df.iloc[index]
+        with Image.open(row['local_image_path']) as img:
+            img_inputs = processor(images=img, return_tensors='pt')
+            txt_inputs = tokenizer(text=row['caption'],
+                                   padding='max_length',
+                                   truncation=True,
+                                   max_length=256,
+                                   add_special_tokens=True,
+                                   return_tensors="pt")
+
+        return {
+            'pixel_values': img_inputs['pixel_values'].squeeze(0),
+            'input_ids': txt_inputs['input_ids'].squeeze(0),
+            'attention_mask': txt_inputs['attention_mask'].squeeze(0),
+            'labels': torch.tensor(
+                ast.literal_eval(row['labels']),
+                dtype=torch.float
+            )
+        }
+
 
 def main():
     df = pd.read_csv(DATA_PATH)
@@ -37,45 +68,19 @@ def main():
     )
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']]
-    train_data['labels'] = train_data.apply(
-        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
-        axis=1
-    )
+    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
+    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]       # For testing
 
-    train_data = Dataset.from_pandas(train_data).remove_columns(['__index_level_0__'])
-    # train_data = train_data.select(range(int(len(train_data)*0.01)))      # For testing
+    train_data = MMProcessingDataset(train_df)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']]
-    eval_data['labels'] = eval_data.apply(
-        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
-        axis=1
-    )
+    eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']].copy()
+    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]    # For testing
 
-    eval_data = Dataset.from_pandas(eval_data).remove_columns(['__index_level_0__'])
-    # eval_data = eval_data.select(range(int(len(eval_data) * 0.01)))       # For testing
+    eval_data = MMProcessingDataset(eval_df)
 
-    # Process images
-    def process_fn(batch):
-        with Image.open(batch['local_image_path']) as img:
-            img_inputs = processor(images=[img], return_tensors='pt')
-            txt_inputs = tokenizer(text=[batch['caption']],
-                                   padding='max_length',
-                                   truncation=True,
-                                   max_length=256,
-                                   add_special_tokens=True,
-                                   return_tensors="pt")
-
-            return {
-                'pixel_values': img_inputs['pixel_values'][0],
-                'input_ids': txt_inputs['input_ids'][0],
-                'attention_mask': txt_inputs['attention_mask'][0],
-                'token_type_ids': txt_inputs['token_type_ids'][0]
-            }
-
-
-    train_data, eval_data = train_data.map(process_fn, batched=False), eval_data.map(process_fn, batched=False)
+    # Delete original DataFrame to free memory
+    del df
 
     for model_type, model_class in model_dict.items():
         model = model_class()
