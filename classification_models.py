@@ -62,8 +62,8 @@ class FusedMMClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.text_model = TextClassifier(base_model='google-bert/bert-base-cased', num_classes=9)
-        self.text_model.load_state_dict(torch.load('../models/bert-dict.pt'))
+        self.text_model = TextClassifier(base_model='FacebookAI/roberta-base', num_classes=9)
+        self.text_model.load_state_dict(torch.load('../models/roberta-dict.pt'))
         for p in self.text_model.parameters():
             p.requires_grad = False
 
