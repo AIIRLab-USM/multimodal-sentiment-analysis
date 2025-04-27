@@ -1,5 +1,6 @@
 import torch
-from transformers import TrainingArguments, EarlyStoppingCallback
+from torch.utils.tensorboard import SummaryWriter
+from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
 from sklearn.metrics import f1_score, precision_score, recall_score, hamming_loss
 
 """
@@ -9,6 +10,11 @@ Author: Clayton Durepos
 Version: 04.24.2025
 Contact: clayton.durepos@maine.edu
 """
+
+# Tensorboard monitoring
+writer = SummaryWriter(log_dir="./logs")
+
+# Additional metrics for monitoring model performance
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = (torch.sigmoid(torch.tensor(logits)) >= 0.5).float().numpy()
@@ -20,9 +26,35 @@ def compute_metrics(eval_pred):
         "hamming_loss": hamming_loss(labels, preds)
     }
 
-early_stop_callback = [EarlyStoppingCallback(early_stopping_patience=2,
-                                            early_stopping_threshold=0.01)]
+# Custom callback class for monitoring modal weight in multi-modal models
+class AlphaCallback(TrainerCallback):
+    def on_evaluate(self, args, state, control, **kwargs):
+        model = kwargs['model']
+        if hasattr(model, 'alpha'):
+            alpha_val = torch.sigmoid(model.alpha).item()
 
+            if alpha_val > 0.5:
+                dom = 'language-dominant'
+            elif alpha_val < 0.5:
+                dom = 'vision-dominant'
+            else:
+                dom = 'balanced'
+
+            print(f'Alpha (modal weight): {alpha_val:.4f} ({dom})')
+
+            if writer is not None:
+                writer.add_scalar('alpha',
+                                  alpha_val,
+                                  global_step=state.global_step)
+
+        return control
+
+
+# Callbacks
+early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=0.01)
+alpha_monitoring_callback = AlphaCallback()
+
+# Training arguments
 training_args = TrainingArguments(
             output_dir="./test_trainer",
 
@@ -53,8 +85,8 @@ training_args = TrainingArguments(
 
             fp16=True,                          # Speed-up training
 
-            per_device_train_batch_size=16,
-            per_device_eval_batch_size=32,
+            per_device_train_batch_size=16,     # Maximum sized allowed by local compute resources
+            per_device_eval_batch_size=32,      # (2x NVIDIA GeForce RTX 2080 Ti)
 
             # Logging
             logging_dir="./logs",

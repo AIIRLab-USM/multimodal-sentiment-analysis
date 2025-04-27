@@ -8,7 +8,7 @@ from PIL import Image
 from classification_models import *
 from torch.utils.data import Dataset
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
-from training import training_args, compute_metrics, early_stop_callback
+from training import training_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
 
 """
 A short script for fine-tuning CLIP on a multimodal sentiment classification task
@@ -104,7 +104,10 @@ def main():
             compute_metrics=compute_metrics,
             train_dataset=train_data,
             eval_dataset=eval_data,
-            callbacks=early_stop_callback
+            callbacks=[
+                early_stopping_callback,
+                alpha_monitoring_callback
+            ]
         )
 
         trainer.train()
@@ -117,3 +120,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    writer.close()

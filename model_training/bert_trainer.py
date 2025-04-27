@@ -67,7 +67,7 @@ def main():
             compute_metrics=compute_metrics,
             train_dataset=train_data,
             eval_dataset=eval_data,
-            callbacks=early_stop_callback
+            callbacks=[early_stop_callback]
         )
 
         trainer.train()
