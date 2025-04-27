@@ -94,7 +94,7 @@ class UnifiedMMClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.text_model = AutoModel.from_pretrained('google-bert/bert-base-cased')
+        self.text_model = AutoModel.from_pretrained('FacebookAI/roberta-base')
         self.image_model = AutoModel.from_pretrained('google/vit-base-patch16-224')
 
         assert self.image_model.config.hidden_size == self.text_model.config.hidden_size
