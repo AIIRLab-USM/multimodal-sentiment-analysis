@@ -9,11 +9,9 @@ from transformers import AutoProcessor, AutoTokenizer
 from classification_models import FusedMMClassifier, UnifiedMMClassifier
 from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_score
 
-from model_training.multimodal_trainer import MMProcessingDataset
-
 tqdm.pandas()
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
-tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
+tokenizer = AutoTokenizer.from_pretrained('FacebookAI/roberta-base')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
@@ -58,12 +56,15 @@ def main():
     test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
 
     # Adjust image_paths to directory structure
-    df['local_image_path'] = df.apply(
+    test_df['local_image_path'] = test_df.apply(
         lambda row: '../' + row['local_image_path'], axis=1
     )
 
     test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+
+    # Remove original DataFrame to free memory
+    del df
 
     for model_type, model_class in model_dict.items():
         model = model_class()
