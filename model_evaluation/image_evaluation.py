@@ -24,54 +24,75 @@ model.eval()
 
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
 
-# Load and pre-process testing data
-df = pd.read_csv(data_path)
-test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
-test_df['labels'] = test_df['labels'].apply(lambda x: ast.literal_eval(x))
-test_df['local_image_path'] = test_df.apply(
-    lambda row: '../' + row['local_image_path'], axis=1
-)
+# Custom dataset for memory efficiency
+class ImageProcessingDataset(torch.utils.data.Dataset):
+    def __init__(self, df):
+        super().__init__()
+        self.df = df
 
-test_data = Dataset.from_pandas(test_df).remove_columns(['__index_level_0__'])
-def process_fn(examples):
-    with Image.open(examples['local_image_path']) as img:
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, index):
+        row = self.df.iloc[index]
+        with Image.open(row['local_image_path']) as img:
+            inputs = processor(images=img, return_tensors='pt')
+
         return {
-            'pixel_values': processor(images=img, return_tensors='pt')['pixel_values'].squeeze(0)
+            'pixel_values': inputs['pixel_values'].squeeze(0),
+            'labels': torch.tensor(
+                ast.literal_eval(row['labels']),
+                dtype=torch.float
+            )
         }
 
-test_data = test_data.map(process_fn, batched=False)
-test_data = test_data.with_format(type='torch', columns=['pixel_values', 'labels'])
-test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+def main():
+    # Load testing data
+    df = pd.read_csv(data_path)
+    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
 
-# Evaluation
-all_preds = []
-all_labels = []
-with torch.no_grad():
-    for batch in tqdm(test_loader, desc="Evaluating"):
-        pixel_values = batch['pixel_values'].to(device)
-        labels = batch['labels'].to(device)
+    # Adjust image_paths for directory structure
+    test_df['local_image_path'] = test_df.apply(
+        lambda row: '../' + row['local_image_path'], axis=1
+    )
 
-        logits = model(pixel_values=pixel_values)['logits']
-        preds = (torch.sigmoid(logits) >= 0.5).float()
+    test_data = ImageProcessingDataset(test_df)
+    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-        all_preds.append(preds.cpu())
-        all_labels.append(labels.cpu())
+    # Remove original DataFrame to free memory
+    del df
 
+    # Evaluation
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for batch in tqdm(test_loader, desc="Evaluating"):
+            pixel_values = batch['pixel_values'].to(device)
+            labels = batch['labels'].to(device)
 
-all_preds = torch.cat(all_preds, dim=0).numpy()
-all_labels = torch.cat(all_labels, dim=0).numpy()
+            logits = model(pixel_values=pixel_values)['logits']
+            preds = (torch.sigmoid(logits) >= 0.5).float()
 
-# Metrics
-f1 = f1_score(all_labels, all_preds, average='weighted')
-precision = precision_score(all_labels, all_preds, average='weighted')
-recall = recall_score(all_labels, all_preds, average='weighted')
+            all_preds.append(preds.cpu())
+            all_labels.append(labels.cpu())
 
-# Accuracy
-ham_acc = 1 - hamming_loss(all_labels, all_preds)   # Label-level
-acc = (all_labels == all_preds).all(axis=1).mean()  # Sample-level
+    all_preds = torch.cat(all_preds, dim=0).numpy()
+    all_labels = torch.cat(all_labels, dim=0).numpy()
 
-print(f"F1 Score (Weighted): {f1:.4f}")
-print(f"Precision (Weighted): {precision:.4f}")
-print(f"Recall (Weighted): {recall:.4f}")
-print(f"Hamming Accuracy: {ham_acc:.4f}")
-print(f"Accuracy: {acc:.4f}")
+    # Metrics
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+    precision = precision_score(all_labels, all_preds, average='weighted')
+    recall = recall_score(all_labels, all_preds, average='weighted')
+
+    # Accuracy
+    ham_acc = 1 - hamming_loss(all_labels, all_preds)   # Label-level
+    acc = (all_labels == all_preds).all(axis=1).mean()  # Sample-level
+
+    print(f"F1 Score (Weighted): {f1:.4f}")
+    print(f"Precision (Weighted): {precision:.4f}")
+    print(f"Recall (Weighted): {recall:.4f}")
+    print(f"Hamming Accuracy: {ham_acc:.4f}")
+    print(f"Accuracy: {acc:.4f}")
+
+if __name__ == "__main__":
+    main()

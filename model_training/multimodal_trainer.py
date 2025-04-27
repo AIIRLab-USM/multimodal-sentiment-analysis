@@ -87,13 +87,17 @@ def main():
 
         # Adjust LR, weight decay, and warm-up for lightweight, fused-logits model
         if model_type == 'fused':
-            training_args.learning_rate = 5e-5
+            training_args.learning_rate = 1e-2
             training_args.weight_decay = 0.0
-            training_args.warmup_steps = 0
+            training_args.warmup_ratio = 0
+
         else:
             training_args.learning_rate = 1e-5      # Used for multimodal models in
                                                     # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                     # UNITER, Chan et al. ECCV 2020
+
+            training_args.weight_decay = 0.01
+            training_args.warmup_ratio = 0.1
 
         trainer = Trainer(
             model=model,
