@@ -83,8 +83,8 @@ def main():
                 logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
                 preds = (torch.sigmoid(logits) >= 0.5).float()
 
-                all_preds.extend(preds.cpu())
-                all_labels.extend(labels.cpu())
+                all_preds.append(preds.cpu())
+                all_labels.append(labels.cpu())
 
         all_preds = torch.cat(all_preds, dim=0).numpy()
         all_labels = torch.cat(all_labels, dim=0).numpy()
