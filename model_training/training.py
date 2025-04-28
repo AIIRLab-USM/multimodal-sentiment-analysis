@@ -28,7 +28,7 @@ def compute_metrics(eval_pred):
 
 # Custom callback class for monitoring modal weight in multi-modal models
 class AlphaCallback(TrainerCallback):
-    def on_evaluate(self, args, state, control, **kwargs):
+    def on_log(self, args, state, control, **kwargs):
         model = kwargs['model']
         if hasattr(model, 'alpha'):
             alpha_val = torch.sigmoid(model.alpha).item()
@@ -40,8 +40,7 @@ class AlphaCallback(TrainerCallback):
             else:
                 dom = 'balanced'
 
-            print(f'Alpha (modal weight): {alpha_val:.4f} ({dom})')
-
+            print(f'\nAlpha (modal weight): {alpha_val:.4f} ({dom})')
             if writer is not None:
                 writer.add_scalar('alpha',
                                   alpha_val,
