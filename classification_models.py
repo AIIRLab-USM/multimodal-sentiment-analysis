@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import BCEWithLogitsLoss
 from transformers import AutoModel
 
 
@@ -36,7 +35,7 @@ class TextClassifier(Classifier):
 
         logits = self.classifier(outputs.pooler_output)
         if labels is not None:
-            loss_fn = BCEWithLogitsLoss()
+            loss_fn = nn.BCEWithLogitsLoss()
             loss = loss_fn(logits, labels)
             return {"logits": logits, "loss": loss}
 
@@ -52,7 +51,7 @@ class ImageClassifier(Classifier):
 
         logits = self.classifier(outputs.pooler_output)
         if labels is not None:
-            loss_fn = BCEWithLogitsLoss()
+            loss_fn = nn.BCEWithLogitsLoss()
             loss = loss_fn(logits, labels)
             return {"logits": logits, "loss": loss}
 
@@ -64,7 +63,10 @@ class MultimodalClassifier(nn.Module):
         super().__init__()
 
         self.text_model = AutoModel.from_pretrained('FacebookAI/roberta-base')
+        self.text_norm = nn.LayerNorm(self.text_model.config.hidden_size)
+
         self.image_model = AutoModel.from_pretrained('google/vit-base-patch16-224')
+        self.image_norm = nn.LayerNorm(self.image_model.config.hidden_size)
 
         assert self.image_model.config.hidden_size == self.text_model.config.hidden_size
 
@@ -77,14 +79,16 @@ class MultimodalClassifier(nn.Module):
                                        attention_mask=attention_mask,
                                        token_type_ids=token_type_ids)
 
+        # Clamp learnable weight to [0, 1]
         a = torch.sigmoid(self.alpha)
         logits = self.classifier(
-            a * text_outputs.pooler_output + (1 - a) * image_outputs.pooler_output
+                    # Calculate the weighted sum of normalized image and text embeddings
+                    a  * self.text_norm(text_outputs.pooler_output) +  (1 - a) * self.image_norm(image_outputs.pooler_output)
         )
 
         if labels is not None:
             labels = labels.to(logits.device)
-            loss_fn = BCEWithLogitsLoss()
+            loss_fn = nn.BCEWithLogitsLoss()
             loss = loss_fn(logits, labels)
             return {"logits": logits, "loss": loss}
 
