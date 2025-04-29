@@ -10,7 +10,7 @@ from training import training_args, compute_metrics, early_stopping_callback
 A short script for fine-tuning the ViT model for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.24.2025
+Version: 04.29.2025
 Contact: clayton.durepos@maine.edu
 """
 

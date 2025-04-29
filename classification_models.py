@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from transformers import AutoModel
 
-
 class MLPHeader(nn.Module):
     def __init__(self, dim, num_classes):
         super().__init__()

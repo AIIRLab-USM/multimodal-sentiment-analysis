@@ -10,10 +10,10 @@ from transformers import AutoImageProcessor, Trainer, AutoTokenizer
 from training import training_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
 
 """
-A short script for fine-tuning CLIP on a multimodal sentiment classification task
+A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 04.24.2025
+Version: 04.29.2025
 Contact: clayton.durepos@maine.edu
 """
 

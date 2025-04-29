@@ -7,7 +7,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, hamming_los
 A small file for shared arguments across model training scripts
 
 Author: Clayton Durepos
-Version: 04.24.2025
+Version: 04.29.2025
 Contact: clayton.durepos@maine.edu
 """
 

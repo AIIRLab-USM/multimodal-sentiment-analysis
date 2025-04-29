@@ -4,7 +4,6 @@ import torch
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
-from datasets import Dataset
 from torch.utils.data import DataLoader
 from transformers import AutoImageProcessor
 from classification_models import ImageClassifier
