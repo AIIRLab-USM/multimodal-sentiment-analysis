@@ -6,7 +6,7 @@ from tqdm import tqdm
 from PIL import Image
 from torch.utils.data import DataLoader
 from transformers import AutoProcessor, AutoTokenizer
-from classification_models import FusedMMClassifier, UnifiedMMClassifier
+from classification_models import MultimodalClassifier
 from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_score
 
 tqdm.pandas()
@@ -15,12 +15,6 @@ tokenizer = AutoTokenizer.from_pretrained('FacebookAI/roberta-base')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
-
-# Models to be evaluated
-model_dict = {
-    'fused': FusedMMClassifier,
-    'unified': UnifiedMMClassifier
-}
 
 class MMProcessingDataset(torch.utils.data.Dataset):
     def __init__(self, df):
@@ -66,48 +60,47 @@ def main():
     # Remove original DataFrame to free memory
     del df
 
-    for model_type, model_class in model_dict.items():
-        model = model_class()
-        model.load_state_dict( torch.load( os.path.join('..', 'models', f'{model_type}-dict.pt')   ) )
-        model = model.to(device).eval()
+    model = MultimodalClassifier()
+    model.load_state_dict( torch.load( os.path.join('..', 'models', f'multimodal-dict.pt')   ) )
+    model = model.to(device).eval()
 
-        all_preds = []
-        all_labels = []
-        with torch.no_grad():
-            for batch in tqdm(test_loader, desc="Evaluating"):
-                pixel_values = batch['pixel_values'].to(device)
-                input_ids = batch['input_ids'].to(device)
-                attention_mask = batch['attention_mask'].to(device)
-                labels = batch['labels'].to(device)
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for batch in tqdm(test_loader, desc="Evaluating"):
+            pixel_values = batch['pixel_values'].to(device)
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
 
-                logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
-                preds = (torch.sigmoid(logits) >= 0.5).float()
+            logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
+            preds = (torch.sigmoid(logits) >= 0.5).float()
 
-                all_preds.append(preds.cpu())
-                all_labels.append(labels.cpu())
+            all_preds.append(preds.cpu())
+            all_labels.append(labels.cpu())
 
-        all_preds = torch.cat(all_preds, dim=0).numpy()
-        all_labels = torch.cat(all_labels, dim=0).numpy()
+    all_preds = torch.cat(all_preds, dim=0).numpy()
+    all_labels = torch.cat(all_labels, dim=0).numpy()
 
-        # Metrics
-        f1 = f1_score(all_labels, all_preds, average='weighted')
-        precision = precision_score(all_labels, all_preds, average='weighted')
-        recall = recall_score(all_labels, all_preds, average='weighted')
+    # Metrics
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+    precision = precision_score(all_labels, all_preds, average='weighted')
+    recall = recall_score(all_labels, all_preds, average='weighted')
 
-        # Accuracy
-        ham_acc = 1 - hamming_loss(all_labels, all_preds)  # Label-level
-        acc = (all_labels == all_preds).all(axis=1).mean()  # Sample-level
+    # Accuracy
+    ham_acc = 1 - hamming_loss(all_labels, all_preds)  # Label-level
+    acc = (all_labels == all_preds).all(axis=1).mean()  # Sample-level
 
-        print(f"F1 Score (Weighted): {f1:.4f}")
-        print(f"Precision (Weighted): {precision:.4f}")
-        print(f"Recall (Weighted): {recall:.4f}")
-        print(f"Hamming Accuracy: {ham_acc:.4f}")
-        print(f"Accuracy: {acc:.4f}")
+    print(f"F1 Score (Weighted): {f1:.4f}")
+    print(f"Precision (Weighted): {precision:.4f}")
+    print(f"Recall (Weighted): {recall:.4f}")
+    print(f"Hamming Accuracy: {ham_acc:.4f}")
+    print(f"Accuracy: {acc:.4f}")
 
-        # Memory management
-        del model, all_preds, all_labels
-        gc.collect()
-        torch.cuda.empty_cache()
+    # Memory management
+    del model, all_preds, all_labels
+    gc.collect()
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

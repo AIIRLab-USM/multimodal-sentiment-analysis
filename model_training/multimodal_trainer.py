@@ -1,12 +1,11 @@
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-import gc
 import ast
+import torch
 import pandas as pd
 from PIL import Image
-from classification_models import *
-from torch.utils.data import Dataset
+from classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
 from training import training_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
 
@@ -22,10 +21,6 @@ DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
 
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
-model_dict = {
-    'fused': FusedMMClassifier,
-    'unified': UnifiedMMClassifier
-}
 
 # Custom dataset for memory efficiency
 class MMProcessingDataset(torch.utils.data.Dataset):
@@ -81,42 +76,22 @@ def main():
     # Delete original DataFrame to free memory
     del df
 
-    for model_type, model_class in model_dict.items():
-        model = model_class()
+    model = MultimodalClassifier()
 
-        # Adjust LR, weight decay, and warm-up for lightweight, fused-logits model
-        if model_type == 'fused':
-            training_args.learning_rate = 1e-2
-            training_args.weight_decay = 0.0
-            training_args.warmup_ratio = 0
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        compute_metrics=compute_metrics,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
+        callbacks=[
+            early_stopping_callback,
+            alpha_monitoring_callback
+        ]
+    )
 
-        else:
-            training_args.learning_rate = 1e-5      # Used for multimodal models in
-                                                    # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
-                                                    # UNITER, Chan et al. ECCV 2020
-
-            training_args.weight_decay = 0.01
-            training_args.warmup_ratio = 0.1
-
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            compute_metrics=compute_metrics,
-            train_dataset=train_data,
-            eval_dataset=eval_data,
-            callbacks=[
-                early_stopping_callback,
-                alpha_monitoring_callback
-            ]
-        )
-
-        trainer.train()
-        torch.save(model.state_dict(), f"../models/{model_type}-dict.pt")
-
-        # Memory management
-        del model
-        gc.collect()
-        torch.cuda.empty_cache()
+    trainer.train()
+    torch.save(model.state_dict(), f"../models/multimodal-dict.pt")
 
 if __name__ == "__main__":
     main()

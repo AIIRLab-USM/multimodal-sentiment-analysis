@@ -58,39 +58,8 @@ class ImageClassifier(Classifier):
 
         return {"logits": logits}
 
-class FusedMMClassifier(nn.Module):
-    def __init__(self):
-        super().__init__()
 
-        self.text_model = TextClassifier(base_model='FacebookAI/roberta-base', num_classes=9)
-        self.text_model.load_state_dict(torch.load('../models/roberta-dict.pt'))
-        for p in self.text_model.parameters():
-            p.requires_grad = False
-
-        self.image_model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
-        self.image_model.load_state_dict(torch.load('../models/vit-dict.pt'))
-        for p in self.image_model.parameters():
-            p.requires_grad = False
-
-        self.alpha = nn.Parameter(torch.tensor(0.5))
-
-    def forward(self, pixel_values=None, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
-        with torch.no_grad():
-            image_outputs = self.image_model(pixel_values)
-            text_outputs = self.text_model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-
-        a = torch.sigmoid(self.alpha)
-        logits = a * text_outputs['logits'] + (1 - a) * image_outputs['logits']
-        if labels is not None:
-            labels = labels.to(logits.device)
-            loss_fn = BCEWithLogitsLoss()
-            loss = loss_fn(logits, labels)
-            return {"logits": logits, "loss": loss}
-
-        return {"logits": logits}
-
-
-class UnifiedMMClassifier(nn.Module):
+class MultimodalClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -99,8 +68,8 @@ class UnifiedMMClassifier(nn.Module):
 
         assert self.image_model.config.hidden_size == self.text_model.config.hidden_size
 
-        self.classifier = MLPHeader(self.text_model.config.hidden_size,9)
         self.alpha = nn.Parameter(torch.tensor(0.5))
+        self.classifier = MLPHeader(self.text_model.config.hidden_size,9)
 
     def forward(self, pixel_values=None, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
         image_outputs = self.image_model(pixel_values)
