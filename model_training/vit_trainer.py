@@ -4,7 +4,7 @@ from PIL import Image
 from classification_models import *
 from torch.utils.data import Dataset
 from transformers import AutoImageProcessor, Trainer
-from training import training_args, compute_metrics, early_stop_callback
+from training import training_args, compute_metrics, early_stopping_callback
 
 """
 A short script for fine-tuning the ViT model for multi-label sentiment classification
@@ -75,7 +75,7 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        callbacks=[early_stop_callback]
+        callbacks=[early_stopping_callback]
     )
 
     trainer.train()

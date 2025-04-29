@@ -75,7 +75,8 @@ training_args = TrainingArguments(
                                                 # ViLT, Kim et al., ICML 2021
                                                 # BERT, Devlin et al., NAACL 2019
 
-            learning_rate=1e-5,                 # Used in LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+            learning_rate=1e-5,                 # Used for multimodal models in
+                                                # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                 # UNITER, Chan et al. ECCV 2020
 
             weight_decay=0.01,                  # Used in UNITER, Chen et al., ECCV 2020

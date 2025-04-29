@@ -5,7 +5,7 @@ from tqdm import tqdm
 from datasets import Dataset
 from classification_models import *
 from transformers import Trainer, AutoTokenizer
-from training import compute_metrics, training_args, early_stop_callback
+from training import compute_metrics, training_args, early_stopping_callback
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
@@ -67,7 +67,7 @@ def main():
             compute_metrics=compute_metrics,
             train_dataset=train_data,
             eval_dataset=eval_data,
-            callbacks=[early_stop_callback]
+            callbacks=[early_stopping_callback]
         )
 
         trainer.train()
