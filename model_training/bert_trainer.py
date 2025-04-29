@@ -74,7 +74,7 @@ def main():
 
         # Save
         save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
-        torch.save(model.state_dict(), f"../models/{save_name}-new-dict.pt")
+        torch.save(model.state_dict(), f"../models/{save_name}-dict.pt")
 
 if __name__ == "__main__":
     main()
