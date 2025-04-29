@@ -20,9 +20,9 @@ def compute_metrics(eval_pred):
     preds = (torch.sigmoid(torch.tensor(logits)) >= 0.5).float().numpy()
 
     return {
-        "f1": f1_score(labels, preds, average="weighted"),
-        "precision": precision_score(labels, preds, average="weighted"),
-        "recall": recall_score(labels, preds, average="weighted"),
+        "f1": f1_score(labels, preds, average="macro"),
+        "precision": precision_score(labels, preds, average="macro"),
+        "recall": recall_score(labels, preds, average="macro"),
         "hamming_loss": hamming_loss(labels, preds)
     }
 

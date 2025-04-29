@@ -80,17 +80,17 @@ def main():
     all_labels = torch.cat(all_labels, dim=0).numpy()
 
     # Metrics
-    f1 = f1_score(all_labels, all_preds, average='weighted')
-    precision = precision_score(all_labels, all_preds, average='weighted')
-    recall = recall_score(all_labels, all_preds, average='weighted')
+    f1 = f1_score(all_labels, all_preds, average='macro')
+    precision = precision_score(all_labels, all_preds, average='macro')
+    recall = recall_score(all_labels, all_preds, average='macro')
 
     # Accuracy
     ham_acc = 1 - hamming_loss(all_labels, all_preds)   # Label-level
     acc = (all_labels == all_preds).all(axis=1).mean()  # Sample-level
 
-    print(f"F1 Score (Weighted): {f1:.4f}")
-    print(f"Precision (Weighted): {precision:.4f}")
-    print(f"Recall (Weighted): {recall:.4f}")
+    print(f"F1 Score (Macro): {f1:.4f}")
+    print(f"Precision (Macro): {precision:.4f}")
+    print(f"Recall (Macro): {recall:.4f}")
     print(f"Hamming Accuracy: {ham_acc:.4f}")
     print(f"Accuracy: {acc:.4f}")
 
