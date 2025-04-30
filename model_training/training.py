@@ -20,25 +20,28 @@ def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = (torch.sigmoid(torch.tensor(logits)) >= 0.5).float().numpy()
 
+    ham_loss = hamming_loss(labels, preds)
     return {
+        "hamming_loss": ham_loss,
+        "accuracy": (labels == preds).all(axis=1).mean(),
+        "hamming_accuracy": 1 - ham_loss,
         "f1": f1_score(labels, preds, average="macro"),
         "precision": precision_score(labels, preds, average="macro"),
         "recall": recall_score(labels, preds, average="macro"),
-        "hamming_loss": hamming_loss(labels, preds)
     }
 
 # Function for maintaining common arguments where necessary
-def get_args(metric:str, output_dir:str, learning_rate:float):
+def get_args(learning_rate:float, output_dir:str):
     return TrainingArguments(
             output_dir=output_dir,
 
             # Evaluation & Saving
             eval_strategy="epoch",
             save_strategy="epoch",
-            metric_for_best_model=metric,
-            load_best_model_at_end=False,
-            greater_is_better=not metric.endswith('loss'),      # 'loss', 'hamming_loss', etc.
-            save_total_limit=2,
+            metric_for_best_model="f1",
+            load_best_model_at_end=True,
+            greater_is_better=True,
+            save_total_limit=3,
 
             # Hyperparameters                   Reasoning, Citation
 

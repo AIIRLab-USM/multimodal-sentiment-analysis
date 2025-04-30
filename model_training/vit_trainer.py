@@ -19,8 +19,6 @@ Contact: clayton.durepos@maine.edu
 DATA_PATH = '../data/multimodal_sentiment_dataset.csv'
 MODEL_NAME = 'google/vit-base-patch16-224'
 
-best_metrics = ["f1", "loss"]
-
 processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 
 # Custom dataset for memory efficiency
@@ -68,31 +66,24 @@ def main():
     # Delete original DataFrame to free memory
     del df
 
-    for best_metric in tqdm( best_metrics, desc="Metric No.", total=len(best_metrics) ):
-        model = ImageClassifier(base_model=MODEL_NAME, num_classes=9)
-        training_args = get_args(metric=best_metric,
-                                 output_dir=f"./vit_test_trainer/{best_metric}",
-                                 learning_rate=1e-4)    # As used in ViT, Dosovitskiy et al., ICLR 2019
+    model = ImageClassifier(base_model=MODEL_NAME, num_classes=9)
+    training_args = get_args(output_dir=f"./vit_test_trainer",
+                             learning_rate=1e-4)    # As used in ViT, Dosovitskiy et al., ICLR 2019
 
-        # Train
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            compute_metrics=compute_metrics,
-            train_dataset=train_data,
-            eval_dataset=eval_data,
-            callbacks=[early_stopping_callback]
-        )
+    # Train
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        compute_metrics=compute_metrics,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
+        callbacks=[early_stopping_callback]
+    )
 
-        trainer.train()
+    trainer.train()
 
-        # Save
-        torch.save(model.state_dict(), f"../models/vit-dict-{best_metric}.pt")
-
-        # Memory management
-        del model
-        gc.collect()
-        torch.cuda.empty_cache()
+    # Save
+    torch.save(model.state_dict(), f"../models/vit-dict-.pt")
 
 if __name__ == "__main__":
     main()

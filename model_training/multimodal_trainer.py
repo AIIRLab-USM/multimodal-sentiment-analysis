@@ -21,8 +21,6 @@ Contact: clayton.durepos@maine.edu
 
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
 
-best_metrics = ["f1", "loss"]
-
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
 
@@ -80,32 +78,30 @@ def main():
     # Delete original DataFrame to free memory
     del df
 
-    for best_metric in tqdm( best_metrics, desc="Metric No.", total=len(best_metrics) ):
-        model = MultimodalClassifier()
-        training_args = get_args(metric=best_metric,
-                                 output_dir=f"./multimodal_test_trainer/{best_metric}",
-                                 learning_rate=1e-5)         # Used for multimodal models in
-                                                             # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
-                                                             # UNITER, Chan et al. ECCV 2020
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            compute_metrics=compute_metrics,
-            train_dataset=train_data,
-            eval_dataset=eval_data,
-            callbacks=[
-                early_stopping_callback,
-                alpha_monitoring_callback
-            ]
-        )
+    model = MultimodalClassifier()
+    training_args = get_args(output_dir=f"./multimodal_test_trainer",
+                             learning_rate=1e-5)         # Used for multimodal models in
+                                                         # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+                                                         # UNITER, Chan et al. ECCV 2020
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        compute_metrics=compute_metrics,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
+        callbacks=[
+            early_stopping_callback,
+            alpha_monitoring_callback
+        ]
+    )
 
-        trainer.train()
-        torch.save(model.state_dict(), f"../models/multimodal-dict-{best_metric}.pt")
+    trainer.train()
+    torch.save(model.state_dict(), f"../models/multimodal-dict.pt")
 
-        # Memory management
-        del model
-        gc.collect()
-        torch.cuda.empty_cache()
+    # Memory management
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

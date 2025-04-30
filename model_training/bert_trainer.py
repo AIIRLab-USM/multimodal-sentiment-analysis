@@ -19,8 +19,6 @@ Contact: clayton.durepos@maine.edu
 MODEL_NAMES = ['google-bert/bert-base-cased', 'FacebookAI/roberta-base']
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
 
-best_metrics = ["f1", "loss"]
-
 def main():
     df = pd.read_csv(DATA_PATH)
 
@@ -44,6 +42,8 @@ def main():
 
     # Training loop
     for name in tqdm(MODEL_NAMES, desc="Model Number", total=len(MODEL_NAMES)):
+        save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
+
         # Tokenize captions
         tokenizer = AutoTokenizer.from_pretrained(name)
         def tokenize_fn(batch):
@@ -57,33 +57,29 @@ def main():
         train_data = train_data.map(tokenize_fn, batched=True)
         eval_data = eval_data.map(tokenize_fn, batched=True)
 
-        save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
-        for best_metric in tqdm( best_metrics, desc="Metric No.", total=len(best_metrics) ):
-            model = TextClassifier(num_classes=9, base_model=name)
-            training_args = get_args(metric=best_metric,
-                                     output_dir=f"./{save_name}_test_trainer/{best_metric}",
-                                     learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
+        model = TextClassifier(num_classes=9, base_model=name)
+        training_args = get_args(output_dir=f"./{save_name}_test_trainer",
+                                 learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
 
+        # Train
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            compute_metrics=compute_metrics,
+            train_dataset=train_data,
+            eval_dataset=eval_data,
+            callbacks=[early_stopping_callback]
+        )
 
-            # Train
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                compute_metrics=compute_metrics,
-                train_dataset=train_data,
-                eval_dataset=eval_data,
-                callbacks=[early_stopping_callback]
-            )
+        trainer.train()
 
-            trainer.train()
+        # Save
+        torch.save(model.state_dict(), f"../models/{save_name}-dict.pt")
 
-            # Save
-            torch.save(model.state_dict(), f"../models/{save_name}-dict-{best_metric}.pt")
-
-            # Memory management
-            del model
-            gc.collect()
-            torch.cuda.empty_cache()
+        # Memory management
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()
