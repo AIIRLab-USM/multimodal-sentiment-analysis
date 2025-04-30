@@ -6,7 +6,6 @@ import ast
 import torch
 import pandas as pd
 from PIL import Image
-from tqdm import tqdm
 from classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
 from training import get_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
