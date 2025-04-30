@@ -81,7 +81,7 @@ def main():
     trainer.train()
 
     # Save
-    torch.save(model.state_dict(), f"../models/vit-dict-.pt")
+    torch.save(model.state_dict(), f"../models/vit-dict.pt")
 
 if __name__ == "__main__":
     main()
