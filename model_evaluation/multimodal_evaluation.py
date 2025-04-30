@@ -97,10 +97,5 @@ def main():
     print(f"Hamming Accuracy: {ham_acc:.4f}")
     print(f"Accuracy: {acc:.4f}")
 
-    # Memory management
-    del model, all_preds, all_labels
-    gc.collect()
-    torch.cuda.empty_cache()
-
 if __name__ == "__main__":
     main()

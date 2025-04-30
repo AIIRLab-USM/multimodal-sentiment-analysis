@@ -1,23 +1,27 @@
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
+import gc
 import ast
 import torch
 import pandas as pd
 from PIL import Image
+from tqdm import tqdm
 from classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
-from training import training_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
+from training import get_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
 
 """
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 04.29.2025
+Version: 04.30.2025
 Contact: clayton.durepos@maine.edu
 """
 
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
+
+best_metrics = ["f1", "loss"]
 
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -76,22 +80,32 @@ def main():
     # Delete original DataFrame to free memory
     del df
 
-    model = MultimodalClassifier()
+    for best_metric in tqdm( best_metrics, desc="Metric No.", total=len(best_metrics) ):
+        model = MultimodalClassifier()
+        training_args = get_args(metric=best_metric,
+                                 output_dir=f"./multimodal_test_trainer/{best_metric}",
+                                 learning_rate=1e-5)         # Used for multimodal models in
+                                                             # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+                                                             # UNITER, Chan et al. ECCV 2020
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            compute_metrics=compute_metrics,
+            train_dataset=train_data,
+            eval_dataset=eval_data,
+            callbacks=[
+                early_stopping_callback,
+                alpha_monitoring_callback
+            ]
+        )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        compute_metrics=compute_metrics,
-        train_dataset=train_data,
-        eval_dataset=eval_data,
-        callbacks=[
-            early_stopping_callback,
-            alpha_monitoring_callback
-        ]
-    )
+        trainer.train()
+        torch.save(model.state_dict(), f"../models/multimodal-dict-{best_metric}.pt")
 
-    trainer.train()
-    torch.save(model.state_dict(), f"../models/multimodal-dict.pt")
+        # Memory management
+        del model
+        gc.collect()
+        torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

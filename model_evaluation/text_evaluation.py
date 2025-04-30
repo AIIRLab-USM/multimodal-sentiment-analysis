@@ -1,4 +1,5 @@
 import os
+import gc
 import ast
 import torch
 import pandas as pd
@@ -76,6 +77,10 @@ def main():
         print(f"Recall (Macro): {recall:.4f}")
         print(f"Hamming Accuracy: {ham_acc:.4f}")
         print(f"Accuracy: {acc:.4f}")
+
+        del model, all_labels, all_preds
+        gc.collect()
+        torch.cuda.empty_cache()
 
 if __name__ == '__main__':
     main()
