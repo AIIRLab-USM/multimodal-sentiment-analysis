@@ -1,8 +1,6 @@
 import os
-import gc
 import ast
 import pandas as pd
-from tqdm import tqdm
 from datasets import Dataset
 from classification_models import *
 from transformers import Trainer, AutoTokenizer
@@ -16,7 +14,7 @@ Version: 04.30.2025
 Contact: clayton.durepos@maine.edu
 """
 
-MODEL_NAMES = ['google-bert/bert-base-cased', 'FacebookAI/roberta-base']
+MODEL_NM = 'google-bert/bert-base-cased'
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
 
 def main():
@@ -40,46 +38,37 @@ def main():
 
     eval_data = Dataset.from_pandas(eval_data).remove_columns(['__index_level_0__'])
 
-    # Training loop
-    for name in tqdm(MODEL_NAMES, desc="Model Number", total=len(MODEL_NAMES)):
-        save_name = 'roberta' if name == 'FacebookAI/roberta-base' else 'bert'
+    # Tokenize captions
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NM)
+    def tokenize_fn(batch):
+        return tokenizer(batch['caption'],
+                         padding='max_length',
+                         truncation=True,
+                         max_length=256,
+                         add_special_tokens=True,
+                         return_tensors="pt")
 
-        # Tokenize captions
-        tokenizer = AutoTokenizer.from_pretrained(name)
-        def tokenize_fn(batch):
-            return tokenizer(batch['caption'],
-                             padding='max_length',
-                             truncation=True,
-                             max_length=256,
-                             add_special_tokens=True,
-                             return_tensors="pt")
+    train_data = train_data.map(tokenize_fn, batched=True)
+    eval_data = eval_data.map(tokenize_fn, batched=True)
 
-        train_data = train_data.map(tokenize_fn, batched=True)
-        eval_data = eval_data.map(tokenize_fn, batched=True)
+    model = TextClassifier(num_classes=9, base_model=MODEL_NM)
+    training_args = get_args(output_dir=f"./bert_test_trainer",
+                             learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
 
-        model = TextClassifier(num_classes=9, base_model=name)
-        training_args = get_args(output_dir=f"./{save_name}_test_trainer",
-                                 learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
+    # Train
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        compute_metrics=compute_metrics,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
+        callbacks=[early_stopping_callback]
+    )
 
-        # Train
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            compute_metrics=compute_metrics,
-            train_dataset=train_data,
-            eval_dataset=eval_data,
-            callbacks=[early_stopping_callback]
-        )
+    trainer.train()
 
-        trainer.train()
-
-        # Save
-        torch.save(model.state_dict(), f"../models/{save_name}-dict.pt")
-
-        # Memory management
-        del model
-        gc.collect()
-        torch.cuda.empty_cache()
+    # Save
+    torch.save(model.state_dict(), f"../models/bert-dict.pt")
 
 if __name__ == "__main__":
     main()
