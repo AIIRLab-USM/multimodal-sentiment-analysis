@@ -94,5 +94,5 @@ class AlphaCallback(TrainerCallback):
 
 
 # Callbacks
-early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=0.01)
+early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=0.001)
 alpha_monitoring_callback = AlphaCallback()
