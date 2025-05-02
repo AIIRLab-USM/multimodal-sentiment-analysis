@@ -74,5 +74,12 @@ def main():
     print(f"Hamming Accuracy: {ham_acc:.4f}")
     print(f"Accuracy: {acc:.4f}")
 
+    # Convert to integer for ease-of-use in reading
+    test_df['prediction'] = all_preds.astype(int).tolist()
+    test_df['labels'] = all_labels.astype(int).tolist()
+
+    # Save direct results
+    test_df.to_csv('text_results.csv', index=False)
+
 if __name__ == '__main__':
     main()

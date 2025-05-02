@@ -11,7 +11,7 @@ from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_scor
 
 tqdm.pandas()
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
-tokenizer = AutoTokenizer.from_pretrained('FacebookAI/roberta-base')
+tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
@@ -96,6 +96,13 @@ def main():
     print(f"Recall (Macro): {recall:.4f}")
     print(f"Hamming Accuracy: {ham_acc:.4f}")
     print(f"Accuracy: {acc:.4f}")
+
+    # Convert to integer for ease-of-use in reading
+    test_df['prediction'] = all_preds.astype(int).tolist()
+    test_df['labels'] = all_labels.astype(int).tolist()
+
+    # Save direct results
+    test_df.to_csv('multimodal_results.csv', index=False)
 
 if __name__ == "__main__":
     main()
