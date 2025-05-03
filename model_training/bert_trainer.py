@@ -34,7 +34,7 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
     train_data['labels'] = train_data.apply(
-        lambda row: label_map[ row['labels'] ],
+        lambda row: torch.tensor( label_map[ row['labels'] ], dtype=torch.long ),
         axis=1
     )
 
@@ -43,7 +43,7 @@ def main():
     # Evaluation Data pre-processing
     eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
     eval_data['labels'] = eval_data.apply(
-        lambda row: label_map[ row['labels'] ],
+        lambda row: torch.tensor( label_map[ row['labels'] ], dtype=torch.long ),
         axis=1
     )
 
