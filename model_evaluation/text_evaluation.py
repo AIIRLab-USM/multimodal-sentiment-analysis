@@ -87,7 +87,6 @@ def main():
         'f1': f1,
         'precision': precision,
         'recall': recall,
-        'hamming_accuracy': ham_acc,
         'accuracy': acc
     }
 
