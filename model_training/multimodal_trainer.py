@@ -19,6 +19,17 @@ Contact: clayton.durepos@maine.edu
 """
 
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
+label_map = {
+    'amusement': 0,
+    'anger': 1,
+    'awe': 2,
+    'contentment': 3,
+    'disgust': 4,
+    'excitement': 5,
+    'fear': 6,
+    'sadness': 7,
+    'something else': 8
+}
 
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -48,9 +59,9 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
             'labels': torch.tensor(
-                ast.literal_eval(row['labels']),
-                dtype=torch.float
-            )
+                        label_map[ row['labels'] ],
+                        dtype=torch.long
+                     )
         }
 
 

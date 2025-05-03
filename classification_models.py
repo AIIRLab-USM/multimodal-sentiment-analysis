@@ -28,7 +28,7 @@ class TextClassifier(Classifier):
     def __init__(self,  num_classes:int, base_model:str):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
         outputs = self.base(input_ids=input_ids,
@@ -50,7 +50,7 @@ class ImageClassifier(Classifier):
     def __init__(self, num_classes:int, base_model:str):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, pixel_values, labels=None):
         outputs = self.base(pixel_values=pixel_values)
@@ -71,7 +71,7 @@ class MultimodalClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.text_model = AutoModel.from_pretrained('FacebookAI/roberta-base')
+        self.text_model = AutoModel.from_pretrained('google-bert/bert-base-cased')
         self.text_norm = nn.LayerNorm(self.text_model.config.hidden_size)
 
         self.image_model = AutoModel.from_pretrained('google/vit-base-patch16-224')
@@ -84,7 +84,7 @@ class MultimodalClassifier(nn.Module):
         self.alpha = nn.Parameter(torch.tensor(0.5))
         self.classifier = MLPHeader(self.text_model.config.hidden_size,9)
 
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, pixel_values=None, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
         image_outputs = self.image_model(pixel_values)

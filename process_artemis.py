@@ -24,9 +24,9 @@ Contact: clayton.durepos@maine.edu
 """
 
 # Default ArtEmis dataset filename
-INPUT_FILE = f"..{os.path.sep}data{os.path.sep}artemis_dataset_release_v0.csv"
+INPUT_FILE = f"data{os.path.sep}artemis_dataset_release_v0.csv"
 
-OUTPUT_FILE = f"..{os.path.sep}data{os.path.sep}custom_artemis.csv"
+OUTPUT_FILE = f"data{os.path.sep}custom_artemis.csv"
 
 LABEL_MAP = {
     'amusement': 0,
@@ -45,14 +45,6 @@ EVAL_RATIO = 0.1
 TEST_RATIO = 0.1
 
 tqdm.pandas()
-
-def mhvect(instance_labels, label_map, total_labels):
-    vect = [0] * total_labels
-    for label in instance_labels:
-        if label in label_map:
-            vect[label_map[label]] = 1
-
-    return vect
 
 def main():
     """
@@ -75,22 +67,26 @@ def main():
         print(f"Error reading {INPUT_FILE} : {e}")
         return
 
+    # Scrap 'utterance'
+    artemis_df = artemis_df[["art_style", "painting", "emotion"]].copy()
+
     # Generate image paths for temporary use
     artemis_df['local_image_path']  = artemis_df.progress_apply(
         lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
     )
 
+    # Keep only most-apparent emotion labels
+    label_count = artemis_df.groupby(['painting', 'emotion']).size().reset_index(name='count')
+    label_count.sort_values(by=['painting', 'count'], ascending=[True, False], inplace=True)
+
+    dominant_emotions = label_count.groupby('painting').first().reset_index()
+
+    artemis_df = artemis_df.merge(dominant_emotions[['painting', 'emotion']], on=['painting', 'emotion'])
+    artemis_df = artemis_df.drop_duplicates(subset=['painting'])
+
     # Customized DF
-    new = artemis_df[["local_image_path"]].copy()
-
-    # Keep only unique images
-    new = new.drop_duplicates(subset='local_image_path')
-
-    # Generate Multi-Hot Vectors (Used for Multi-Label Classification)
-    new['labels'] = new.progress_apply(
-        lambda row: mhvect(artemis_df.loc[artemis_df['local_image_path'] == row['local_image_path']]['emotion'].unique().tolist(), LABEL_MAP, 9),
-        axis=1
-    )
+    new = artemis_df[["emotion","local_image_path"]].copy()
+    new = new.rename(columns={'emotion':'labels', 'local_image_path':'local_image_path'})
 
     # Label train, eval, test
     train_df, temp_df = train_test_split(new, test_size=(1-TRAIN_RATIO), random_state=42)

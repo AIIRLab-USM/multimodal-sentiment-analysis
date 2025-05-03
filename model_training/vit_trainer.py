@@ -16,6 +16,17 @@ Contact: clayton.durepos@maine.edu
 
 DATA_PATH = '../data/multimodal_sentiment_dataset.csv'
 MODEL_NAME = 'google/vit-base-patch16-224'
+label_map = {
+    'amusement': 0,
+    'anger': 1,
+    'awe': 2,
+    'contentment': 3,
+    'disgust': 4,
+    'excitement': 5,
+    'fear': 6,
+    'sadness': 7,
+    'something else': 8
+}
 
 processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 
@@ -36,9 +47,9 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
         return {
             'pixel_values': inputs['pixel_values'].squeeze(0),
             'labels': torch.tensor(
-                ast.literal_eval(row['labels']),
-                dtype=torch.float
-            )
+                        label_map[ row['labels'] ],
+                        dtype=torch.long
+                     )
         }
 
 def main():

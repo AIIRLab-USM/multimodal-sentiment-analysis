@@ -2,7 +2,7 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
-from sklearn.metrics import f1_score, precision_score, recall_score, hamming_loss
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 """
 A small file for shared arguments across model training scripts
@@ -18,13 +18,10 @@ writer = SummaryWriter(log_dir="./logs")
 # Additional metrics for monitoring model performance
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
-    preds = (torch.sigmoid(torch.tensor(logits)) >= 0.5).float().numpy()
+    preds = logits.argmax(axis=1)
 
-    ham_loss = hamming_loss(labels, preds)
     return {
-        "hamming_loss": ham_loss,
-        "accuracy": (labels == preds).all(axis=1).mean(),
-        "hamming_accuracy": 1 - ham_loss,
+        "accuracy": accuracy_score(labels, preds),
         "f1": f1_score(labels, preds, average="macro"),
         "precision": precision_score(labels, preds, average="macro"),
         "recall": recall_score(labels, preds, average="macro"),

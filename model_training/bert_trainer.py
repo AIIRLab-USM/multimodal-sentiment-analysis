@@ -16,6 +16,17 @@ Contact: clayton.durepos@maine.edu
 
 MODEL_NM = 'google-bert/bert-base-cased'
 DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
+label_map = {
+    'amusement': 0,
+    'anger': 1,
+    'awe': 2,
+    'contentment': 3,
+    'disgust': 4,
+    'excitement': 5,
+    'fear': 6,
+    'sadness': 7,
+    'something else': 8
+}
 
 def main():
     df = pd.read_csv(DATA_PATH)
@@ -23,7 +34,7 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
     train_data['labels'] = train_data.apply(
-        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        lambda row: label_map[ row['labels'] ],
         axis=1
     )
 
@@ -32,7 +43,7 @@ def main():
     # Evaluation Data pre-processing
     eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
     eval_data['labels'] = eval_data.apply(
-        lambda row: [float(x) for x in ast.literal_eval(row['labels'])],
+        lambda row: label_map[ row['labels'] ],
         axis=1
     )
 
