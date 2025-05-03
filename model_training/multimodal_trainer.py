@@ -58,10 +58,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': torch.tensor(
-                        label_map[ row['labels'] ],
-                        dtype=torch.long
-                     )
+            'labels': label_map[ row['labels'] ]
         }
 
 

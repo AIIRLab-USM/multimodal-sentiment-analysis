@@ -46,10 +46,7 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
         return {
             'pixel_values': inputs['pixel_values'].squeeze(0),
-            'labels': torch.tensor(
-                        label_map[ row['labels'] ],
-                        dtype=torch.long
-                     )
+            'labels': label_map[ row['labels'] ]
         }
 
 def main():
