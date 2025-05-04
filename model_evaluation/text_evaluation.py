@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dict_path = os.path.join('..', 'models', 'bert-dict.pt')
+dict_path = os.path.join('..', 'models', 'bert-dict-refined.pt')
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -28,7 +28,7 @@ def main():
     # Load and pre-process testing data
     df = pd.read_csv(data_path)
     test_df = df[df['split'] == 'test'].copy()[['caption', 'labels']]
-    test_df['labels'] = test_df['labels'].apply(lambda x: label_map[x])
+    test_df['labels'] = test_df['labels'].apply(lambda x: torch.tensor(label_map[x] ,dtype=torch.long) )
 
 
     # Load model & tokenizer
@@ -90,7 +90,7 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv('text_metrics.csv')
+    pd.DataFrame(metric_dict, index=['1']).to_csv('text_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
