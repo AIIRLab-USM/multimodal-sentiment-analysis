@@ -75,12 +75,22 @@ def main():
         lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
     )
 
-    # Keep only most-apparent emotion labels
+    # Count emotion labels per painting
     label_count = artemis_df.groupby(['painting', 'emotion']).size().reset_index(name='count')
     label_count.sort_values(by=['painting', 'count'], ascending=[True, False], inplace=True)
 
+    # Remove images with a tie for most-dominant emotion to remove label ambiguity
+    top_emotions = label_count.groupby('painting').head(2)
+    tied_paintings = top_emotions.groupby('painting').filter(
+        lambda x: len(x) > 1 and x['count'].nunique() == 1
+    )['painting'].unique()
+
+    label_count = label_count[~label_count['painting'].isin(tied_paintings)]
+
+    # Get most dominant emotion
     dominant_emotions = label_count.groupby('painting').first().reset_index()
 
+    # Merge and deduplicate
     artemis_df = artemis_df.merge(dominant_emotions[['painting', 'emotion']], on=['painting', 'emotion'])
     artemis_df = artemis_df.drop_duplicates(subset=['painting'])
 
