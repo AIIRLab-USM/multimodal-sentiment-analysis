@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dict_path = os.path.join('..', 'models', 'bert-dict-refined.pt')
+dict_path = os.path.join('..', 'models', 'bert-dict.pt')
 label_map = {
     'amusement': 0,
     'anger': 1,

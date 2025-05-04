@@ -112,7 +112,7 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv('multimodal_metrics.csv')
+    pd.DataFrame(metric_dict, index=['1']).to_csv('multimodal_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
