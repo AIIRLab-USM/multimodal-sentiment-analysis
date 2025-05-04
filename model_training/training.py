@@ -35,10 +35,10 @@ def get_args(learning_rate:float, output_dir:str):
             # Evaluation & Saving
             eval_strategy="epoch",
             save_strategy="epoch",
-            metric_for_best_model="f1",
+            metric_for_best_model="accuracy",
             load_best_model_at_end=True,
             greater_is_better=True,
-            save_total_limit=3,
+            save_total_limit=1,
 
             # Hyperparameters                   Reasoning, Citation
 
@@ -62,7 +62,7 @@ def get_args(learning_rate:float, output_dir:str):
             per_device_eval_batch_size=32,      # (2x NVIDIA GeForce RTX 2080 Ti)
 
             # Logging
-            logging_dir=f"./logs",
+            logging_dir=f"model_training{os.path.sep}logs",
             logging_steps=64,
             report_to="tensorboard"             # For visualizing metrics & performance
         )

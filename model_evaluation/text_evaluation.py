@@ -1,17 +1,15 @@
 import os
-import gc
-import ast
 import torch
 import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from classification_models import TextClassifier
-from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from torch.utils.data import DataLoader, TensorDataset
 
-data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
+data_path = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dict_path = os.path.join('..', 'models', 'bert-dict.pt')
+dict_path = f'models{os.path.sep}bert-dict.pt'
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -27,9 +25,9 @@ label_map = {
 def main():
     # Load and pre-process testing data
     df = pd.read_csv(data_path)
+
     test_df = df[df['split'] == 'test'].copy()[['caption', 'labels']]
     test_df['labels'] = test_df['labels'].apply(lambda x: torch.tensor(label_map[x] ,dtype=torch.long) )
-
 
     # Load model & tokenizer
     model = TextClassifier(base_model='google-bert/bert-base-cased', num_classes=9)
@@ -90,14 +88,14 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv('text_metrics.csv', index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}text_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv('text_results.csv', index=False)
+    test_df.to_csv(f'model_evaluation{os.path.sep}text_results.csv', index=False)
 
 if __name__ == '__main__':
     main()

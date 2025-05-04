@@ -4,18 +4,18 @@ import pandas as pd
 from datasets import Dataset
 from classification_models import *
 from transformers import Trainer, AutoTokenizer
-from training import compute_metrics, get_args, early_stopping_callback
+from model_training.training import compute_metrics, get_args, early_stopping_callback
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 04.30.2025
+Version: 05.04.2025
 Contact: clayton.durepos@maine.edu
 """
 
 MODEL_NM = 'google-bert/bert-base-cased'
-DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
+DATA_PATH = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -63,7 +63,7 @@ def main():
     eval_data = eval_data.map(tokenize_fn, batched=True)
 
     model = TextClassifier(num_classes=9, base_model=MODEL_NM)
-    training_args = get_args(output_dir=f"./bert_test_trainer",
+    training_args = get_args(output_dir=f"model_training{os.path.sep}bert_test_trainer",
                              learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
 
     # Train
@@ -79,7 +79,7 @@ def main():
     trainer.train()
 
     # Save
-    torch.save(model.state_dict(), f"../models/bert-dict.pt")
+    torch.save(model.state_dict(), f"models{os.path.sep}bert-dict.pt")
 
 if __name__ == "__main__":
     main()

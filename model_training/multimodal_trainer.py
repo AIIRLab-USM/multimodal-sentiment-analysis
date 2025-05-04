@@ -8,17 +8,17 @@ import pandas as pd
 from PIL import Image
 from classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
-from training import get_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
+from model_training.training import get_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
 
 """
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 04.30.2025
+Version: 05.04.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = f'..{os.path.sep}data{os.path.sep}multimodal_sentiment_dataset.csv'
+DATA_PATH = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -65,11 +65,6 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 def main():
     df = pd.read_csv(DATA_PATH)
 
-    # Modify image_paths to comply with directory structure
-    df['local_image_path'] = df.apply(
-        lambda row: '../' + row['local_image_path'], axis=1
-    )
-
     # Train Data pre-processing
     train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
     # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]       # For testing
@@ -86,7 +81,7 @@ def main():
     del df
 
     model = MultimodalClassifier()
-    training_args = get_args(output_dir=f"./multimodal_test_trainer",
+    training_args = get_args(output_dir=f"model_training{os.path.sep}multimodal_test_trainer",
                              learning_rate=1e-5)         # Used for multimodal models in
                                                          # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                          # UNITER, Chan et al. ECCV 2020
@@ -103,7 +98,7 @@ def main():
     )
 
     trainer.train()
-    torch.save(model.state_dict(), f"../models/multimodal-dict.pt")
+    torch.save(model.state_dict(), f"models{os.path.sep}multimodal-dict.pt")
 
     # Memory management
     del model

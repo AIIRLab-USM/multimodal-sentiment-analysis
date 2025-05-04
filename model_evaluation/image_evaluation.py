@@ -1,5 +1,4 @@
 import os
-import ast
 import torch
 import pandas as pd
 from PIL import Image
@@ -7,13 +6,13 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformers import AutoImageProcessor
 from classification_models import ImageClassifier
-from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 tqdm.pandas()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-state_dict_path = os.path.join('..','models', 'vit-dict.pt')
-data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
+state_dict_path = f'models{os.path.sep}vit-dict.pt'
+data_path = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -56,13 +55,8 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 def main():
     # Load testing data
     df = pd.read_csv(data_path)
+
     test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
-
-    # Adjust image_paths for directory structure
-    test_df['local_image_path'] = test_df.apply(
-        lambda row: '../' + row['local_image_path'], axis=1
-    )
-
     test_data = ImageProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
@@ -105,14 +99,14 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv('image_metrics.csv', index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}image_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv('image_results.csv', index=False)
+    test_df.to_csv(f'model_evaluation{os.path.sep}image_results.csv', index=False)
 
 if __name__ == "__main__":
     main()

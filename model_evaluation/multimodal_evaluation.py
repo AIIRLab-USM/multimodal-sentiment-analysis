@@ -25,7 +25,7 @@ label_map = {
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-data_path = os.path.join('..', 'data', 'multimodal_sentiment_dataset.csv')
+data_path = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
 
 class MMProcessingDataset(torch.utils.data.Dataset):
     def __init__(self, df):
@@ -58,13 +58,8 @@ def main():
 
     # Load testing data
     df = pd.read_csv(data_path)
+
     test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
-
-    # Adjust image_paths to directory structure
-    test_df['local_image_path'] = test_df.apply(
-        lambda row: '../' + row['local_image_path'], axis=1
-    )
-
     test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
@@ -72,7 +67,7 @@ def main():
     del df
 
     model = MultimodalClassifier()
-    model.load_state_dict( torch.load( os.path.join('..', 'models', f'multimodal-dict.pt')   ) )
+    model.load_state_dict( torch.load( f'models{os.path.sep}multimodal-dict.pt')   )
     model = model.to(device).eval()
 
     all_preds = []
@@ -112,14 +107,14 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv('multimodal_metrics.csv', index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}multimodal_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv('multimodal_results.csv', index=False)
+    test_df.to_csv(f'model_evaluation{os.path.sep}multimodal_results.csv', index=False)
 
 if __name__ == "__main__":
     main()
