@@ -17,5 +17,8 @@ models/
 model_training/logs/
 model_training/test_trainer/
 
+# Evaluation results
+model_evaluation/evaluation_results
+
 # File for small, one-time use scripts
 test.py

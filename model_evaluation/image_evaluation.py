@@ -100,14 +100,14 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}image_metrics.csv', index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}evaluation_results{os.path.sep}image_metrics.csv', index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv(f'model_evaluation{os.path.sep}image_results.csv', index=False)
+    test_df.to_csv(f'model_evaluation{os.path.sep}evaluation_results{os.path.sep}image_results.csv', index=False)
 
 if __name__ == "__main__":
     main()
