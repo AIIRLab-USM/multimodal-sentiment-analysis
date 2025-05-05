@@ -25,12 +25,7 @@ label_map = {
     'something else': 8
 }
 
-# Load model & tokenizer
-model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
-model.load_state_dict(torch.load(state_dict_path))
-model.to(device)
-model.eval()
-
+# Load tokenizer
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
 
 # Custom dataset for memory efficiency
@@ -62,6 +57,12 @@ def main():
 
     # Remove original DataFrame to free memory
     del df
+
+    # Load model
+    model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
+    model.load_state_dict(torch.load(state_dict_path))
+    model.to(device)
+    model.eval()
 
     # Evaluation
     all_preds = []

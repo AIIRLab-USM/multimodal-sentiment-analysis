@@ -1,5 +1,4 @@
 import os
-import gc
 import torch
 import pandas as pd
 from tqdm import tqdm
@@ -7,9 +6,8 @@ from PIL import Image
 from torch.utils.data import DataLoader
 from transformers import AutoProcessor, AutoTokenizer
 from classification_models import MultimodalClassifier
-from sklearn.metrics import hamming_loss, f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
-tqdm.pandas()
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 label_map = {
@@ -26,6 +24,8 @@ label_map = {
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_path = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
+
+tqdm.pandas()
 
 class MMProcessingDataset(torch.utils.data.Dataset):
     def __init__(self, df):
@@ -66,6 +66,7 @@ def main():
     # Remove original DataFrame to free memory
     del df
 
+    # Load model
     model = MultimodalClassifier()
     model.load_state_dict( torch.load( f'models{os.path.sep}multimodal-dict.pt')   )
     model = model.to(device).eval()
