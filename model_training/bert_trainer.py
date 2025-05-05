@@ -1,10 +1,11 @@
 import os
-import ast
+import numpy as np
 import pandas as pd
 from datasets import Dataset
 from classification_models import *
-from transformers import Trainer, AutoTokenizer
-from model_training.training import compute_metrics, get_args, early_stopping_callback
+from transformers import AutoTokenizer
+from sklearn.utils.class_weight import compute_class_weight
+from model_training.training import compute_metrics, get_args, early_stopping_callback, WeightedTrainer
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
@@ -29,23 +30,24 @@ label_map = {
 }
 
 def main():
+    global loss_fn
+
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
-    train_data['labels'] = train_data.apply(
-        lambda row: label_map[ row['labels'] ],
-        axis=1
-    )
+    train_data['labels'] = train_data['labels'].apply(lambda x: label_map[x])
+
+    # Compute class weights
+    class_weights = compute_class_weight(class_weight='balanced',
+                             classes=np.arange( len(label_map)),
+                             y=train_data['labels'].tolist())
 
     train_data = Dataset.from_pandas(train_data).remove_columns(['__index_level_0__'])
 
     # Evaluation Data pre-processing
     eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
-    eval_data['labels'] = eval_data.apply(
-        lambda row: label_map[ row['labels'] ],
-        axis=1
-    )
+    eval_data['labels'] = eval_data['labels'].apply(lambda x: label_map[x])
 
     eval_data = Dataset.from_pandas(eval_data).remove_columns(['__index_level_0__'])
 
@@ -67,12 +69,13 @@ def main():
                              learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
 
     # Train
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
+        class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 

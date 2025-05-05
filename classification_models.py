@@ -28,7 +28,6 @@ class TextClassifier(Classifier):
     def __init__(self,  num_classes:int, base_model:str):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
-        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
         outputs = self.base(input_ids=input_ids,
@@ -36,35 +35,18 @@ class TextClassifier(Classifier):
                            token_type_ids=token_type_ids)
 
         logits = self.classifier(outputs.pooler_output)
-        loss = None
-
-        if labels is not None:
-            loss = self.loss_fn(logits, labels)
-
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
-        )
+        return SequenceClassifierOutput(logits=logits)
 
 class ImageClassifier(Classifier):
     def __init__(self, num_classes:int, base_model:str):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
-        self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, pixel_values, labels=None):
         outputs = self.base(pixel_values=pixel_values)
 
         logits = self.classifier(outputs.pooler_output)
-        loss = None
-
-        if labels is not None:
-            loss = self.loss_fn(logits, labels)
-
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
-        )
+        return SequenceClassifierOutput(logits=logits)
 
 
 class MultimodalClassifier(nn.Module):
@@ -84,8 +66,6 @@ class MultimodalClassifier(nn.Module):
         self.alpha = nn.Parameter(torch.tensor(0.5))
         self.classifier = MLPHeader(self.text_model.config.hidden_size,9)
 
-        self.loss_fn = nn.CrossEntropyLoss()
-
     def forward(self, pixel_values=None, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
         image_outputs = self.image_model(pixel_values)
         text_outputs = self.text_model(input_ids=input_ids,
@@ -99,11 +79,4 @@ class MultimodalClassifier(nn.Module):
                     a  * self.text_norm(text_outputs.pooler_output) +  (1 - a) * self.image_norm(image_outputs.pooler_output)
         )
 
-        loss = None
-        if labels is not None:
-            loss = self.loss_fn(logits, labels)
-
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits
-        )
+        return SequenceClassifierOutput(logits=logits)

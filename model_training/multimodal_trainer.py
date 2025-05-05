@@ -2,13 +2,17 @@ import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 import gc
-import ast
 import torch
+import numpy as np
 import pandas as pd
 from PIL import Image
+from sklearn.utils.class_weight import compute_class_weight
 from classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, Trainer, AutoTokenizer
-from model_training.training import get_args, compute_metrics, early_stopping_callback, alpha_monitoring_callback, writer
+from model_training.training import (
+    get_args, compute_metrics, early_stopping_callback,
+    alpha_monitoring_callback, WeightedTrainer, writer
+)
 
 """
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
@@ -67,7 +71,12 @@ def main():
 
     # Train Data pre-processing
     train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
-    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]       # For testing
+    # train_df = train_df.iloc[:int(len(train_df) * 0.01)]       # For testing
+
+    # Compute class weights
+    class_weights = compute_class_weight(class_weight='balanced',
+                                         classes=np.arange(len(label_map)),
+                                         y=train_df['labels'].tolist())
 
     train_data = MMProcessingDataset(train_df)
 
@@ -85,12 +94,13 @@ def main():
                              learning_rate=1e-5)         # Used for multimodal models in
                                                          # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                          # UNITER, Chan et al. ECCV 2020
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
+        class_weights=class_weights,
         callbacks=[
             early_stopping_callback,
             alpha_monitoring_callback

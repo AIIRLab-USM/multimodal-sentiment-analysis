@@ -1,10 +1,12 @@
 import os
+import torch
+import numpy as np
 import pandas as pd
 from PIL import Image
 from classification_models import *
-from torch.utils.data import Dataset
-from transformers import AutoImageProcessor, Trainer
-from model_training.training import get_args, compute_metrics, early_stopping_callback
+from transformers import AutoImageProcessor
+from sklearn.utils.class_weight import compute_class_weight
+from model_training.training import get_args, compute_metrics, early_stopping_callback, WeightedTrainer
 
 """
 A short script for fine-tuning the ViT model for multi-label sentiment classification
@@ -53,16 +55,21 @@ def main():
     df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'labels']]
 
     # Train dataset initialization
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels']].copy()
-    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]       # For testing
+    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'labels']].copy()
+    # train_df = train_df.iloc[:int(len(train_df) * 0.01)]       # For testing
 
-    train_data = ImageProcessingDataset(train_data)
+    # Compute class weights
+    class_weights = compute_class_weight(class_weight='balanced',
+                                         classes=np.arange(len(label_map)),
+                                         y=train_df['labels'].tolist())
+
+    train_data = ImageProcessingDataset(train_df)
 
     # Evaluation dataset initialization
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'labels']].copy()
-    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]    # For testing
+    eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'labels']].copy()
+    # eval_df = eval_dfiloc[:int(len(eval_df) * 0.01)]    # For testing
 
-    eval_data = ImageProcessingDataset(eval_data)
+    eval_data = ImageProcessingDataset(eval_df)
 
     # Delete original DataFrame to free memory
     del df
@@ -72,12 +79,13 @@ def main():
                              learning_rate=1e-4)    # As used in ViT, Dosovitskiy et al., ICLR 2019
 
     # Train
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
+        class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 

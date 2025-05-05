@@ -1,5 +1,6 @@
 import os
 import torch
+from transformers import Trainer
 from torch.utils.tensorboard import SummaryWriter
 from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
@@ -14,6 +15,24 @@ Contact: clayton.durepos@maine.edu
 
 # Tensorboard monitoring
 writer = SummaryWriter(log_dir="./logs")
+
+# Custom trainer for weighted classes
+class WeightedTrainer(Trainer):
+
+    # Overload to store class_weights - Constructor uses raw weights from sklearn.utils.class_weight.compute_class_weight for ease of use
+    def __init__(self, *args, class_weights=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.class_weights = torch.tensor(class_weights, dtype=torch.float) if class_weights is not None else None
+
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs.logits
+
+        # Initialize loss_function, dynamically move class_weights
+        loss_fn = torch.nn.CrossEntropyLoss( weight=self.class_weights.to( logits.device ) )
+        loss = loss_fn(logits, labels)
+        return (loss, outputs) if return_outputs else loss
 
 # Additional metrics for monitoring model performance
 def compute_metrics(eval_pred):
