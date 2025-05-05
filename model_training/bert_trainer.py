@@ -65,8 +65,7 @@ def main():
     eval_data = eval_data.map(tokenize_fn, batched=True)
 
     model = TextClassifier(num_classes=9, base_model=MODEL_NM)
-    training_args = get_args(output_dir=f"model_training{os.path.sep}bert_test_trainer",
-                             learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
+    training_args = get_args(learning_rate=2e-5)    # As used in BERT - Devlin et al., NAACL 2019
 
     # Train
     trainer = WeightedTrainer(

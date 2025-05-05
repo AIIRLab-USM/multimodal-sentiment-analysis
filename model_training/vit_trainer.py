@@ -76,8 +76,7 @@ def main():
     del df
 
     model = ImageClassifier(base_model=MODEL_NAME, num_classes=9)
-    training_args = get_args(output_dir=f"model_training{os.path.sep}vit_test_trainer",
-                             learning_rate=1e-4)    # As used in ViT, Dosovitskiy et al., ICLR 2019
+    training_args = get_args(learning_rate=1e-4)    # As used in ViT, Dosovitskiy et al., ICLR 2019
 
     # Train
     trainer = WeightedTrainer(

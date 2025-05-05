@@ -14,7 +14,7 @@ Contact: clayton.durepos@maine.edu
 """
 
 # Tensorboard monitoring
-writer = SummaryWriter(log_dir="./logs")
+writer = SummaryWriter(log_dir=f"model_training{os.path.sep}logs")
 
 # Custom trainer for weighted classes
 class WeightedTrainer(Trainer):
@@ -47,17 +47,15 @@ def compute_metrics(eval_pred):
     }
 
 # Function for maintaining common arguments where necessary
-def get_args(learning_rate:float, output_dir:str):
+def get_args(learning_rate:float):
     return TrainingArguments(
-            output_dir=output_dir,
-
             # Evaluation & Saving
             eval_strategy="epoch",
             save_strategy="epoch",
             metric_for_best_model="accuracy",
             load_best_model_at_end=True,
             greater_is_better=True,
-            save_total_limit=1,
+            save_total_limit=3,
 
             # Hyperparameters                   Reasoning, Citation
 

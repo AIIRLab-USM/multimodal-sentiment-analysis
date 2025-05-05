@@ -91,8 +91,7 @@ def main():
     del df
 
     model = MultimodalClassifier()
-    training_args = get_args(output_dir=f"model_training{os.path.sep}multimodal_test_trainer",
-                             learning_rate=1e-5)         # Used for multimodal models in
+    training_args = get_args(learning_rate=1e-5)         # Used for multimodal models in
                                                          # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                          # UNITER, Chan et al. ECCV 2020
     trainer = WeightedTrainer(
