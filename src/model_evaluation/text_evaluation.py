@@ -25,7 +25,7 @@ label_map = {
 }
 
 def main():
-    os.makedirs('data' / 'evaluation', exist_ok=True)
+    os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
 
     # Load and pre-process testing data
     df = pd.read_csv(data_path)
@@ -99,7 +99,7 @@ def main():
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv( os.path.join('data', 'evaluation', 'text_metrics.csv'), index=False)
+    test_df.to_csv( os.path.join('data', 'evaluation', 'text_results.csv'), index=False)
 
 if __name__ == '__main__':
     main()

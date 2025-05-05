@@ -120,7 +120,7 @@ def main():
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
+    test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)
 
 if __name__ == "__main__":
     main()
