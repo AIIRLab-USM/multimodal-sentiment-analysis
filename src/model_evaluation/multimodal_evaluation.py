@@ -1,18 +1,22 @@
 import os
 import torch
 import pandas as pd
-from PIL import Image
 from tqdm import tqdm
+from PIL import Image
 from torch.utils.data import DataLoader
-from transformers import AutoImageProcessor
-from classification_models import ImageClassifier
+from transformers import AutoProcessor, AutoTokenizer
+from src.classification_models import MultimodalClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
-tqdm.pandas()
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-state_dict_path = f'models{os.path.sep}vit-dict.pt'
-data_path = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
+
+processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
+tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
+
+data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+dict_path = f'models{os.path.sep}multimodal-dict.pt'
+
+
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -25,11 +29,9 @@ label_map = {
     'something else': 8
 }
 
-# Load tokenizer
-processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
+tqdm.pandas()
 
-# Custom dataset for memory efficiency
-class ImageProcessingDataset(torch.utils.data.Dataset):
+class MMProcessingDataset(torch.utils.data.Dataset):
     def __init__(self, df):
         super().__init__()
         self.df = df
@@ -40,39 +42,50 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         row = self.df.iloc[index]
         with Image.open(row['local_image_path']) as img:
-            inputs = processor(images=img, return_tensors='pt')
+            img_inputs = processor(images=img, return_tensors='pt')
+            txt_inputs = tokenizer(text=row['caption'],
+                                   padding='max_length',
+                                   truncation=True,
+                                   max_length=256,
+                                   add_special_tokens=True,
+                                   return_tensors="pt")
 
         return {
-            'pixel_values': inputs['pixel_values'].squeeze(0),
-            'labels': label_map[ row['labels'] ]
+            'pixel_values': img_inputs['pixel_values'].squeeze(0),
+            'input_ids': txt_inputs['input_ids'].squeeze(0),
+            'attention_mask': txt_inputs['attention_mask'].squeeze(0),
+            'labels': label_map[ row['labels'] ],
         }
 
+
 def main():
+    os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
+
     # Load testing data
     df = pd.read_csv(data_path)
 
-    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
-    test_data = ImageProcessingDataset(test_df)
+    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
+    test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
     # Remove original DataFrame to free memory
     del df
 
     # Load model
-    model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
-    model.load_state_dict(torch.load(state_dict_path))
-    model.to(device)
-    model.eval()
+    model = MultimodalClassifier()
+    model.load_state_dict( torch.load( dict_path )   )
+    model = model.to(device).eval()
 
-    # Evaluation
     all_preds = []
     all_labels = []
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Evaluating"):
             pixel_values = batch['pixel_values'].to(device)
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
             labels = batch['labels'].to(device)
 
-            logits = model(pixel_values=pixel_values)['logits']
+            logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
             preds = logits.argmax(dim=1)
 
             all_preds.append(preds.cpu())
@@ -100,14 +113,14 @@ def main():
         'accuracy': acc
     }
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv(f'model_evaluation{os.path.sep}evaluation_results{os.path.sep}image_metrics.csv', index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
     test_df['labels'] = all_labels.astype(int).tolist()
 
     # Save direct results
-    test_df.to_csv(f'model_evaluation{os.path.sep}evaluation_results{os.path.sep}image_results.csv', index=False)
+    test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
 
 if __name__ == "__main__":
     main()

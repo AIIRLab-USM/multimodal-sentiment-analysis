@@ -2,10 +2,10 @@ import os
 import numpy as np
 import pandas as pd
 from datasets import Dataset
-from classification_models import *
+from src.classification_models import *
 from transformers import AutoTokenizer
 from sklearn.utils.class_weight import compute_class_weight
-from model_training.training import compute_metrics, get_args, early_stopping_callback, WeightedTrainer
+from src.model_training.training import compute_metrics, get_args, early_stopping_callback, WeightedTrainer
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
@@ -16,7 +16,7 @@ Contact: clayton.durepos@maine.edu
 """
 
 MODEL_NM = 'google-bert/bert-base-cased'
-DATA_PATH = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -30,7 +30,7 @@ label_map = {
 }
 
 def main():
-    global loss_fn
+    os.makedirs('models', exist_ok=True)
 
     df = pd.read_csv(DATA_PATH)
 
@@ -81,7 +81,7 @@ def main():
     trainer.train()
 
     # Save
-    torch.save(model.state_dict(), f"models{os.path.sep}bert-dict.pt")
+    torch.save(model.state_dict(), f'models{os.path.sep}bert-dict.pt')
 
 if __name__ == "__main__":
     main()

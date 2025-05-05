@@ -1,12 +1,11 @@
 import os
-import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
-from classification_models import *
+from src.classification_models import *
 from transformers import AutoImageProcessor
 from sklearn.utils.class_weight import compute_class_weight
-from model_training.training import get_args, compute_metrics, early_stopping_callback, WeightedTrainer
+from src.model_training.training import get_args, compute_metrics, early_stopping_callback, WeightedTrainer
 
 """
 A short script for fine-tuning the ViT model for multi-label sentiment classification
@@ -16,7 +15,7 @@ Version: 05.04.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 MODEL_NAME = 'google/vit-base-patch16-224'
 label_map = {
     'amusement': 0,
@@ -52,6 +51,8 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
         }
 
 def main():
+    os.makedirs('models', exist_ok=True)
+
     df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'labels']]
 
     # Train dataset initialization
@@ -92,7 +93,7 @@ def main():
     trainer.train()
 
     # Save
-    torch.save(model.state_dict(), f"models{os.path.sep}vit-dict.pt")
+    torch.save(model.state_dict(), f'models{os.path.sep}vit-dict.pt')
 
 if __name__ == "__main__":
     main()

@@ -14,7 +14,7 @@ Contact: clayton.durepos@maine.edu
 """
 
 # Tensorboard monitoring
-writer = SummaryWriter(log_dir=f"model_training{os.path.sep}logs")
+writer = SummaryWriter(log_dir= os.path.join('src','model_training','logs') )
 
 # Custom trainer for weighted classes
 class WeightedTrainer(Trainer):
@@ -49,7 +49,7 @@ def compute_metrics(eval_pred):
 # Function for maintaining common arguments where necessary
 def get_args(learning_rate:float):
     return TrainingArguments(
-            output_dir=f"model_training{os.path.sep}trainer_output",
+            output_dir= os.path.join( 'src', 'model_training', 'trainer_output' ),
 
             # Evaluation & Saving
             eval_strategy="epoch",
@@ -81,7 +81,7 @@ def get_args(learning_rate:float):
             per_device_eval_batch_size=32,      # (2x NVIDIA GeForce RTX 2080 Ti)
 
             # Logging
-            logging_dir=f"model_training{os.path.sep}logs",
+            logging_dir=os.path.join( 'src', 'model_training', 'logs'),
             logging_steps=64,
             report_to="tensorboard"             # For visualizing metrics & performance
         )

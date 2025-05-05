@@ -3,6 +3,7 @@ import torch
 import os
 from tqdm import tqdm
 from PIL import Image
+from pathlib import Path
 from transformers import BitsAndBytesConfig
 from transformers import pipeline
 
@@ -57,8 +58,8 @@ class CaptionGenerator:
 
 
     def from_csv(self,
-                          in_path,
-                          out_path,
+                          in_path:str | Path,
+                          out_path:str | Path,
                           prompt="USER: <image>\nCaption this image\nASSISTANT:",
                           batch_size=16):
         """
@@ -99,8 +100,8 @@ class CaptionGenerator:
 
 def main():
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = f"data{os.path.sep}custom_artemis.csv"
-    out_path = f"data{os.path.sep}multimodal_sentiment_dataset.csv"
+    in_path = os.path.join('data', 'datasets', 'custom_artemis.csv')
+    out_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()

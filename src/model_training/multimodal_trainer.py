@@ -1,15 +1,14 @@
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-import gc
 import torch
 import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.utils.class_weight import compute_class_weight
-from classification_models import MultimodalClassifier
-from transformers import AutoImageProcessor, Trainer, AutoTokenizer
-from model_training.training import (
+from src.classification_models import MultimodalClassifier
+from transformers import AutoImageProcessor, AutoTokenizer
+from src.model_training.training import (
     get_args, compute_metrics, early_stopping_callback,
     alpha_monitoring_callback, WeightedTrainer, writer
 )
@@ -22,7 +21,7 @@ Version: 05.04.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = f'data{os.path.sep}multimodal_sentiment_dataset.csv'
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -67,6 +66,8 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 
 
 def main():
+    os.makedirs('models', exist_ok=True)
+
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
@@ -108,12 +109,7 @@ def main():
     )
 
     trainer.train()
-    torch.save(model.state_dict(), f"models{os.path.sep}multimodal-dict.pt")
-
-    # Memory management
-    del model
-    gc.collect()
-    torch.cuda.empty_cache()
+    torch.save(model.state_dict(), f'models{os.path.sep}multimodal-dict.pt')
 
 if __name__ == "__main__":
     main()

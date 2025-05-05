@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from tqdm import tqdm
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 """
@@ -23,10 +24,11 @@ Version: 04.11.2025
 Contact: clayton.durepos@maine.edu
 """
 
-# Default ArtEmis dataset filename
-INPUT_FILE = f"data{os.path.sep}artemis_dataset_release_v0.csv"
 
-OUTPUT_FILE = f"data{os.path.sep}custom_artemis.csv"
+# Default ArtEmis dataset filename
+INPUT_FILE = os.path.join( 'data', 'datasets', 'artemis_dataset_release_v0.csv')
+
+OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
 
 LABEL_MAP = {
     'amusement': 0,
@@ -72,7 +74,7 @@ def main():
 
     # Generate image paths for temporary use
     artemis_df['local_image_path']  = artemis_df.progress_apply(
-        lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
+        lambda row: os.path.join("./wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
     )
 
     # Count emotion labels per painting

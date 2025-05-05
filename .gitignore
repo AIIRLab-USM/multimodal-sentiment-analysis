@@ -14,11 +14,8 @@ data/
 models/
 
 # Training logs
-model_training/logs/
-model_training/test_trainer/
-
-# Evaluation results
-model_evaluation/evaluation_results
+src/model_training/logs/
+src/model_training/trainer_output/
 
 # File for small, one-time use scripts
 test.py
