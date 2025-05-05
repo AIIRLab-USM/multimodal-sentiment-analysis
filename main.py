@@ -1,7 +1,6 @@
-import process_artemis
-import caption_generation
-from model_training import bert_trainer, vit_trainer, multimodal_trainer
-from model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation
+from src.model_training import bert_trainer, vit_trainer, multimodal_trainer
+from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation
+from src.data_preprocessing import process_artemis, caption_generation
 
 """
 Script for project-ease-of-use
