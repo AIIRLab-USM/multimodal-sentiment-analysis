@@ -61,7 +61,8 @@ def main():
     # Compute class weights
     class_weights = compute_class_weight(class_weight='balanced',
                                          classes=np.arange(len(label_map)),
-                                         y=train_df['labels'].tolist())
+                                         y=train_df['labels'].map(label_map).tolist()
+                                         )
 
     train_data = ImageProcessingDataset(train_df)
 
