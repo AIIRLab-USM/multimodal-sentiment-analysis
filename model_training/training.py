@@ -49,6 +49,8 @@ def compute_metrics(eval_pred):
 # Function for maintaining common arguments where necessary
 def get_args(learning_rate:float):
     return TrainingArguments(
+            output_dir=f"model_training{os.path.sep}tmp_trainer",
+
             # Evaluation & Saving
             eval_strategy="epoch",
             save_strategy="epoch",
