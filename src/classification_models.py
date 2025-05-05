@@ -62,9 +62,8 @@ class MultimodalClassifier(nn.Module):
         # Ensure image_model and text_model embeddings are of identical vector space
         assert self.image_model.config.hidden_size == self.text_model.config.hidden_size
 
-        # Alpha weight, classification head
-        self.alpha = nn.Parameter(torch.tensor(0.5))
-        self.classifier = MLPHeader(self.text_model.config.hidden_size,9)
+        # Classification head
+        self.classifier = MLPHeader(self.text_model.config.hidden_size+self.image_model.config.hidden_size,9)
 
     def forward(self, pixel_values=None, input_ids=None, attention_mask=None, token_type_ids=None, labels=None):
         image_outputs = self.image_model(pixel_values)
@@ -72,11 +71,11 @@ class MultimodalClassifier(nn.Module):
                                        attention_mask=attention_mask,
                                        token_type_ids=token_type_ids)
 
-        # Clamp learnable weight to [0, 1]
-        a = torch.sigmoid(self.alpha)
-        logits = self.classifier(
-                    # Calculate the weighted sum of normalized image and text embeddings
-                    a  * self.text_norm(text_outputs.pooler_output) +  (1 - a) * self.image_norm(image_outputs.pooler_output)
+        logits = self.classifier(                                   # Fused embeddings through concatenation
+            torch.cat([                                      # As seen in ALBEF, Li et al., 2021
+                self.text_norm(text_outputs.pooler_output),
+                self.image_norm(image_outputs.pooler_output)
+            ], dim=1)
         )
 
         return SequenceClassifierOutput(logits=logits)
