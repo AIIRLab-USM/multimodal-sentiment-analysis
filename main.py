@@ -1,6 +1,7 @@
 from src.model_training import bert_trainer, vit_trainer, multimodal_trainer
 from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation
 from src.data_preprocessing import process_artemis, caption_generation
+from src import data_visualization
 
 """
 Script for project-ease-of-use
@@ -53,3 +54,6 @@ if __name__ == '__main__':
 
     # Evaluate multi-modal model
     multimodal_evaluation.main()
+
+    # Generate confusion matrices for each modality
+    data_visualization.main()
