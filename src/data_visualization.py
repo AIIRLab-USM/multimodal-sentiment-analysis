@@ -20,15 +20,24 @@ label_map = {
 
 def main():
     os.makedirs(f'data{os.path.sep}plot', exist_ok=True)
-    for result_type in result_types:
-        curr_dir = f'data{os.path.sep}plot{os.path.sep}{result_type}'
-        os.makedirs(curr_dir, exist_ok=True)
 
+    # Class distribution chart
+    df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
+    label_counts = df['labels'].value_counts().sort_index()
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(label_map.keys(), label_counts)
+    plt.xticks(rotation=45)
+    plt.title("Class Distribution")
+    plt.xlabel("Emotion")
+    plt.ylabel("Number of Samples")
+    plt.tight_layout()
+    plt.savefig(os.path.join('data', 'plot', 'class_distribution.png'))
+
+    # Confusion matrices for each modality
+    for result_type in result_types:
         curr_data_path = os.path.join('data', 'evaluation', result_type)
         result_df = pd.read_csv(f'{curr_data_path}_results.csv')
-
-        # Heatmap for confusion matrix
-        inverse_label_map = {v: k for k, v in label_map.items()}
 
         y_true = result_df['labels']
         y_pred = result_df['prediction']
@@ -39,14 +48,14 @@ def main():
         # Plot
         plt.figure(figsize=(10, 8))
         sns.heatmap(cm_normalized, annot=True, fmt=".2f", cmap="Reds",
-                    xticklabels=[inverse_label_map[i] for i in range(len(label_map))],
-                    yticklabels=[inverse_label_map[i] for i in range(len(label_map))])
+                    xticklabels=list( label_map.keys() ),
+                    yticklabels=list( label_map.keys() ))
 
         plt.xlabel("Prediction")
         plt.ylabel("Ground Truth")
-        plt.title("Normalized Confusion Matrix")
+        plt.title(f"{ result_type.capitalize() } Confusion Matrix")
         plt.tight_layout()
-        plt.savefig(f"{curr_dir}{os.path.sep}confusion_matrix.png")
+        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.png') )
 
 if __name__ == "__main__":
     main()
