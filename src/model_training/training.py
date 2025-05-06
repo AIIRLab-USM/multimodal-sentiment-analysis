@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.nn.functional as F
 from transformers import Trainer
 from torch.utils.tensorboard import SummaryWriter
 from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
@@ -16,6 +17,36 @@ Contact: clayton.durepos@maine.edu
 # Tensorboard monitoring
 writer = SummaryWriter(log_dir= os.path.join('src','model_training','logs') )
 
+class FocalLoss(torch.nn.Module):
+    def __init__(self, gamma=2.0, weight=None, reduction='mean'):
+        super().__init__()
+        self.gamma = gamma
+        self.weight = weight
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        # Logarithm of probabilities \[ log(p_t) \]
+        logpt = F.log_softmax(inputs, dim=1)
+
+        # Retrieve \[ log(p_t) \] for ground-truth label
+        logpt = logpt.gather(1, targets.unsqueeze(1))
+        logpt = logpt.view(-1)
+
+        # Undo logarithm to retrieve \[ p_t \]
+        pt = torch.exp(logpt)
+
+        # Compute with focal loss formula
+        # \[ -w_t (1-p_t)^\gamma log(p_t) \]
+        focal_loss = -((1 - pt) ** self.gamma) * logpt
+        if self.weight is not None:
+            focal_loss = self.weight.gather(0, targets) * focal_loss
+
+        return focal_loss.mean()
+
+
+
+
+
 # Custom trainer for weighted classes
 class WeightedTrainer(Trainer):
 
@@ -30,8 +61,8 @@ class WeightedTrainer(Trainer):
         logits = outputs.logits
 
         # Initialize loss_function, dynamically move class_weights
-        loss_fn = torch.nn.CrossEntropyLoss( weight=self.class_weights.to( logits.device ) )
-        loss = loss_fn(logits, labels)
+        loss_fn = FocalLoss( gamma=2.0, weight=self.class_weights.to( logits.device ) )
+        loss = loss_fn(inputs=logits, targets=labels)
         return (loss, outputs) if return_outputs else loss
 
 # Additional metrics for monitoring model performance
