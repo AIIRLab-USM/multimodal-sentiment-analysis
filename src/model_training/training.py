@@ -78,6 +78,7 @@ def compute_metrics(eval_pred):
 def get_args(learning_rate:float):
     return TrainingArguments(
             output_dir= os.path.join( 'src', 'model_training', 'trainer_output' ),
+            remove_unused_columns=False,        # Model doesn't take labels - They should remain in inputs for loss_fn
 
             # Evaluation & Saving
             eval_strategy="epoch",
