@@ -1,10 +1,90 @@
-USE
+# Multimodal Sentiment Classification
 
-    Any user that may wish to replicate the experiments conducted using the code within this
-    repository may do so by running the script found in 'main.py'
+This repository contains the codebase for our research, exploring whether generating textual descriptions of artworks
+and classifying those captions — alone or accompanied by visual input — more effectively captures sentiment than relying
+solely on vision for classification.
 
-PURPOSE
+---
 
-    The code in this repository was written for research on the difference in performance 
-    between unimodal models and a multi-modal model when being trained for and tasked with 
-    multi-class sentiment classification.
+## Abstract
+
+Understanding sentiment in fine-art images is a complex task that may benefit from human-like reasoning through 
+language. In this study, we investigate whether the intermediate step of **caption generation** — transforming image 
+content into affective language — enhances sentiment classification performance. We evaluate:
+
+- **Language** Classification
+- **Vision** Classification
+- **Multimodal** Classification
+
+This pipeline allows us to assess whether converting visual signals into descriptive language leads to better emotional 
+understanding by machine learning models.
+
+---
+
+## Method Overview
+
+Our study consists of three parallel pipelines:
+
+1. **Image-only**: A Vision Transformer (ViT) classifies emotion directly from artwork images.
+2. **Caption-only**: We generate affective captions using LLaVA and classify them using a fine-tuned BERT model.
+3. **Multimodal Fusion**: Language and vision embeddings are concatenated and passed through an MLP for classification.
+
+---
+
+## Dataset
+
+We use a modified version of the **ArtEmis** dataset:
+
+- Images are from WikiArt.
+- Affective captions are generated using a pre-trained **LLaVA** model.
+-  Only the most dominant emotion is used, for each sample. Those with $>1$ dominant emotions are removed to avoid 
+ambiguity.
+
+---
+
+## Installation
+
+```
+git clone https://github.io/cdurepos/multimodal-sentiment-analysis.git
+cd multimodal-sentiment-analysis
+pip install -r requirements.txt
+```
+
+---
+
+## Use
+```
+python main.py
+```
+
+The main script for this repository will run scripts to preprocess data, train the models mentioned prior, and
+evaluate them. Evaluation metrics and sample-level results will be saved locally, as well as confusion matrices
+for each modality and a class-distribution graph.
+
+It is important to note that caption generation and model training can take especially long.
+
+---
+
+## Directory Structure
+
+```
+multimodal-sentiment-analysis
+|--- data/
+|     |--- datasets/
+|     |--- evaluation/
+|     |--- plot/    
+|--- models/
+|--- src/
+|--- main.py
+|--- README.md
+|--- requirements.txt
+```
+
+---
+
+## Acknowledgments
+
+- [PyTorch](https://pytorch.org/)
+- [HuggingFace Transformers](https://huggingface.co/)
+- [ArtEmis Dataset](https://www.artemisdataset.org)
+
