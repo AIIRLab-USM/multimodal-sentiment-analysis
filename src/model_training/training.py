@@ -44,9 +44,6 @@ class FocalLoss(torch.nn.Module):
         return focal_loss.mean()
 
 
-
-
-
 # Custom trainer for weighted classes
 class WeightedTrainer(Trainer):
 
