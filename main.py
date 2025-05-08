@@ -28,32 +28,32 @@ Contact: clayton.durepos@maine.edu
 """
 
 if __name__ == '__main__':
-    # Process original data
-    process_artemis.main()
-
-    # Generate captions for final dataset
-    # NOTICE: This step takes especially long
-    caption_generation.main()
+    # # Process original data
+    # process_artemis.main()
+    #
+    # # Generate captions for final dataset
+    # # NOTICE: This step takes especially long
+    # caption_generation.main()
 
     # Train text-classification model
     bert_trainer.main()
 
-    # Train image-classification model
-    # NOTICE: This step takes especially long
-    vit_trainer.main()
-
-    # Train multi-modal classification model
-    # NOTICE: This step takes especially long
-    multimodal_trainer.main()
+    # # Train image-classification model
+    # # NOTICE: This step takes especially long
+    # vit_trainer.main()
+    #
+    # # Train multi-modal classification model
+    # # NOTICE: This step takes especially long
+    # multimodal_trainer.main()
 
     # Evaluate text-model
     text_evaluation.main()
 
-    # Evaluate image-model
-    image_evaluation.main()
-
-    # Evaluate multi-modal model
-    multimodal_evaluation.main()
+    # # Evaluate image-model
+    # image_evaluation.main()
+    #
+    # # Evaluate multi-modal model
+    # multimodal_evaluation.main()
 
     # Generate confusion matrices for each modality
     data_visualization.main()

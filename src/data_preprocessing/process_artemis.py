@@ -26,7 +26,8 @@ Contact: clayton.durepos@maine.edu
 
 
 # Default ArtEmis dataset filename
-INPUT_FILE = os.path.join( 'data', 'datasets', 'artemis_dataset_release_v0.csv')
+ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'artemis_dataset_release_v0.csv')
+CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'Contrastive.csv')
 
 OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
 
@@ -58,16 +59,27 @@ def main():
     """
 
     # Check if ArtEmis dataset is present
-    if not os.path.exists(INPUT_FILE):
+    if not os.path.exists(ARTEMIS_PATH):
         raise FileNotFoundError("Missing ArtEmis data"
                                 " - Refer to https://www.artemisdataset.org/#dataset")
-
     try:
-        artemis_df = pd.read_csv(INPUT_FILE)
-
+        artemis_df = pd.read_csv(ARTEMIS_PATH)
     except Exception as e:
-        print(f"Error reading {INPUT_FILE} : {e}")
+        print(f"Error reading {ARTEMIS_PATH} : {e}")
         return
+
+    # Check if ArtEmis V2.0 data is present
+    if not os.path.exists(CONTRASTIVE_PATH):
+        raise FileNotFoundError("Missing ArtEmis V2.0 data"
+                                " - Refer to https://www.artemisdataset-v2.org/")
+    try:
+        contrastive_df = pd.read_csv(CONTRASTIVE_PATH)
+    except Exception as e:
+        print(f"Error reading {CONTRASTIVE_PATH} : {e}")
+        return
+
+    # Concat data for ArtEmis V2.0 DataFrame
+    artemis_df = pd.concat([artemis_df, contrastive_df])
 
     # Scrap 'utterance'
     artemis_df = artemis_df[["art_style", "painting", "emotion"]].copy()
