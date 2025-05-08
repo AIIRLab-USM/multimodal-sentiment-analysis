@@ -74,25 +74,26 @@ def main():
 
     # Generate image paths for temporary use
     artemis_df['local_image_path']  = artemis_df.progress_apply(
-        lambda row: os.path.join("./wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
+        lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
     )
 
-    # Count emotion labels per painting
+    # Count number of labels per emotion for each painting
     label_count = artemis_df.groupby(['painting', 'emotion']).size().reset_index(name='count')
+
+    # Get total amount of labels per image
+    total_counts = label_count.groupby('painting')['count'].sum().reset_index(name='total_count')
+
+    # Merge
+    label_count = label_count.merge(total_counts, on='painting')
+
+    # Filter to only retain samples where dominant emotion accounts for >=50% of labels
     label_count.sort_values(by=['painting', 'count'], ascending=[True, False], inplace=True)
-
-    # Remove images with a tie for most-dominant emotion to remove label ambiguity
-    top_emotions = label_count.groupby('painting').head(2)
-    tied_paintings = top_emotions.groupby('painting').filter(
-        lambda x: len(x) > 1 and x['count'].nunique() == 1
-    )['painting'].unique()
-
-    label_count = label_count[~label_count['painting'].isin(tied_paintings)]
-
-    # Get most dominant emotion
     dominant_emotions = label_count.groupby('painting').first().reset_index()
+    dominant_emotions = dominant_emotions[
+        dominant_emotions['count'] / dominant_emotions['total_count'] >= 0.5
+    ]
 
-    # Merge and deduplicate
+    # Merge with original dataframe
     artemis_df = artemis_df.merge(dominant_emotions[['painting', 'emotion']], on=['painting', 'emotion'])
     artemis_df = artemis_df.drop_duplicates(subset=['painting'])
 
