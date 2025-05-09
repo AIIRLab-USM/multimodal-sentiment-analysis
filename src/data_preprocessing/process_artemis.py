@@ -1,7 +1,7 @@
 import os
+import unicodedata
 import pandas as pd
 from tqdm import tqdm
-from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 """
@@ -63,7 +63,7 @@ def main():
         raise FileNotFoundError("Missing ArtEmis data"
                                 " - Refer to https://www.artemisdataset.org/#dataset")
     try:
-        artemis_df = pd.read_csv(ARTEMIS_PATH)
+        artemis_df = pd.read_csv(ARTEMIS_PATH, encoding='utf-8')
     except Exception as e:
         print(f"Error reading {ARTEMIS_PATH} : {e}")
         return
@@ -73,7 +73,7 @@ def main():
         raise FileNotFoundError("Missing ArtEmis V2.0 data"
                                 " - Refer to https://www.artemisdataset-v2.org/")
     try:
-        contrastive_df = pd.read_csv(CONTRASTIVE_PATH)
+        contrastive_df = pd.read_csv(CONTRASTIVE_PATH, encoding='utf-8')
     except Exception as e:
         print(f"Error reading {CONTRASTIVE_PATH} : {e}")
         return
@@ -86,7 +86,9 @@ def main():
 
     # Generate image paths for temporary use
     artemis_df['local_image_path']  = artemis_df.progress_apply(
-        lambda row: os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg"), axis=1
+        lambda row: unicodedata.normalize('NFC',
+                        os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg")
+                    ), axis=1
     )
 
     # Count number of labels per emotion for each painting
@@ -128,7 +130,7 @@ def main():
 
     # Save generated data to a new CSV file
     try:
-        new.to_csv(OUTPUT_FILE, index=False)
+        new.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
 
     except Exception as e:
         print(f"Error saving {OUTPUT_FILE} : {e}")
