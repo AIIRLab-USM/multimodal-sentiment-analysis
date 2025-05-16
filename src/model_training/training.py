@@ -83,7 +83,7 @@ def get_args(learning_rate:float):
             # Evaluation & Saving
             eval_strategy="epoch",
             save_strategy="epoch",
-            metric_for_best_model="accuracy",
+            metric_for_best_model="f1",
             load_best_model_at_end=True,
             greater_is_better=True,
             save_total_limit=3,
