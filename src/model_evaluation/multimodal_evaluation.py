@@ -13,8 +13,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 
-data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
-dict_path = f'models{os.path.sep}multimodal-dict.pt'
+state_dict_paths = [
+    f'models{os.path.sep}multimodal-dict.pt',
+    f'models{os.path.sep}bal-training_multimodal-dict.pt'
+]
+
+data_paths = [
+    os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv'),
+    os.path.join('data', 'datasets', 'bal_multimodal_sentiment_dataset.csv')
+]
 
 
 label_map = {
@@ -61,66 +68,70 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 def main():
     os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
 
-    # Load testing data
-    df = pd.read_csv(data_path)
+    for state_dict_path, data_path in zip(state_dict_paths, data_paths):
+        save_name = 'multimodal' if state_dict_path==state_dict_paths[0] \
+            else 'bal-training_multimodal'
 
-    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
-    test_data = MMProcessingDataset(test_df)
-    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+        # Load testing data
+        df = pd.read_csv(data_path)
 
-    # Remove original DataFrame to free memory
-    del df
+        test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
+        test_data = MMProcessingDataset(test_df)
+        test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-    # Load model
-    model = MultimodalClassifier()
-    model.load_state_dict( torch.load( dict_path )   )
-    model = model.to(device).eval()
+        # Remove original DataFrame to free memory
+        del df
 
-    all_preds = []
-    all_labels = []
-    with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Evaluating"):
-            pixel_values = batch['pixel_values'].to(device)
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
+        # Load model
+        model = MultimodalClassifier()
+        model.load_state_dict( torch.load( state_dict_path )   )
+        model = model.to(device).eval()
 
-            logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
-            preds = logits.argmax(dim=1)
+        all_preds = []
+        all_labels = []
+        with torch.no_grad():
+            for batch in tqdm(test_loader, desc="Evaluating"):
+                pixel_values = batch['pixel_values'].to(device)
+                input_ids = batch['input_ids'].to(device)
+                attention_mask = batch['attention_mask'].to(device)
+                labels = batch['labels'].to(device)
 
-            all_preds.append(preds.cpu())
-            all_labels.append(labels.cpu())
+                logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
+                preds = logits.argmax(dim=1)
 
-    all_preds = torch.cat(all_preds, dim=0).numpy()
-    all_labels = torch.cat(all_labels, dim=0).numpy()
+                all_preds.append(preds.cpu())
+                all_labels.append(labels.cpu())
 
-    # Metrics
-    f1 = f1_score(all_labels, all_preds, average='macro')
-    precision = precision_score(all_labels, all_preds, average='macro')
-    recall = recall_score(all_labels, all_preds, average='macro')
-    acc = accuracy_score(all_labels, all_preds)
+        all_preds = torch.cat(all_preds, dim=0).numpy()
+        all_labels = torch.cat(all_labels, dim=0).numpy()
 
-    print(f"F1 Score (Macro): {f1:.4f}")
-    print(f"Precision (Macro): {precision:.4f}")
-    print(f"Recall (Macro): {recall:.4f}")
-    print(f"Accuracy: {acc:.4f}")
+        # Metrics
+        f1 = f1_score(all_labels, all_preds, average='macro')
+        precision = precision_score(all_labels, all_preds, average='macro')
+        recall = recall_score(all_labels, all_preds, average='macro')
+        acc = accuracy_score(all_labels, all_preds)
 
-    # Save metrics
-    metric_dict = {
-        'f1': f1,
-        'precision': precision,
-        'recall': recall,
-        'accuracy': acc
-    }
+        print(f"F1 Score (Macro): {f1:.4f}")
+        print(f"Precision (Macro): {precision:.4f}")
+        print(f"Recall (Macro): {recall:.4f}")
+        print(f"Accuracy: {acc:.4f}")
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
+        # Save metrics
+        metric_dict = {
+            'f1': f1,
+            'precision': precision,
+            'recall': recall,
+            'accuracy': acc
+        }
 
-    # Convert to integer for ease-of-use in reading
-    test_df['prediction'] = all_preds.astype(int).tolist()
-    test_df['labels'] = all_labels.astype(int).tolist()
+        pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', f'{save_name}-metrics.csv'), index=False)
 
-    # Save direct results
-    test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)
+        # Convert to integer for ease-of-use in reading
+        test_df['prediction'] = all_preds.astype(int).tolist()
+        test_df['labels'] = all_labels.astype(int).tolist()
+
+        # Save direct results
+        test_df.to_csv( os.path.join('data', 'evaluation', f'{save_name}-results.csv'), index=False)
 
 if __name__ == "__main__":
     main()

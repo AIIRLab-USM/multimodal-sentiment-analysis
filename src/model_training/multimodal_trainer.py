@@ -7,10 +7,9 @@ import pandas as pd
 from PIL import Image
 from sklearn.utils.class_weight import compute_class_weight
 from src.classification_models import MultimodalClassifier
-from transformers import AutoImageProcessor, AutoTokenizer
+from transformers import AutoImageProcessor, AutoTokenizer, EarlyStoppingCallback
 from src.model_training.training import (
-    get_args, compute_metrics, early_stopping_callback,
-    alpha_monitoring_callback, WeightedTrainer, writer
+    get_args, compute_metrics, WeightedTrainer, CELTrainer
 )
 
 """
@@ -21,7 +20,11 @@ Version: 05.04.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+DATA_PATHS = [
+    # os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv'),
+    os.path.join('data', 'datasets', 'bal_multimodal_sentiment_dataset.csv')
+]
+
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -68,49 +71,73 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 def main():
     os.makedirs('models', exist_ok=True)
 
-    df = pd.read_csv(DATA_PATH)
+    for model_num, path in enumerate(DATA_PATHS, start=1):
+        df = pd.read_csv(path)[['split', 'local_image_path', 'caption', 'labels']]
 
-    # Train Data pre-processing
-    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
-    # train_df = train_df.iloc[:int(len(train_df) * 0.01)]       # For testing
+        # Train dataset initialization
+        train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
+        # train_df = train_df.iloc[:int(len(train_df) * 0.01)]       # For testing
 
-    # Compute class weights
-    class_weights = compute_class_weight(class_weight='balanced',
-                                         classes=np.arange(len(label_map)),
-                                         y=train_df['labels'].map(label_map).tolist()
-                                         )
+        train_data = MMProcessingDataset(train_df)
 
-    train_data = MMProcessingDataset(train_df)
+        # Evaluation dataset initialization
+        eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']].copy()
+        # eval_df = eval_dfiloc[:int(len(eval_df) * 0.01)]    # For testing
 
-    # Evaluation Data pre-processing
-    eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']].copy()
-    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]    # For testing
+        eval_data = MMProcessingDataset(eval_df)
 
-    eval_data = MMProcessingDataset(eval_df)
+        # Delete original DataFrame to free memory
+        del df
 
-    # Delete original DataFrame to free memory
-    del df
+        model = MultimodalClassifier()
 
-    model = MultimodalClassifier()
-    training_args = get_args(learning_rate=1e-5)         # Used for multimodal models in
-                                                         # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
-                                                         # UNITER, Chan et al. ECCV 2020
-    trainer = WeightedTrainer(
-        model=model,
-        args=training_args,
-        compute_metrics=compute_metrics,
-        train_dataset=train_data,
-        eval_dataset=eval_data,
-        class_weights=class_weights,
-        callbacks=[
-            early_stopping_callback,
-            alpha_monitoring_callback
-        ]
-    )
+        # Train
+        # Imbalanced data
+        if model_num == 1:
+            training_args = get_args(learning_rate=1e-5,    # Used for multimodal models in
+                                                            # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+                                                            # UNITER, Chan et al. ECCV 2020
+                                     num_train_epochs=10)
 
-    trainer.train()
-    torch.save(model.state_dict(), f'models{os.path.sep}multimodal-dict.pt')
+            class_weights = compute_class_weight(class_weight='balanced',
+                                                 classes=np.arange(len(label_map)),
+                                                 y=train_df['labels'].map(label_map).tolist()
+                                                 )
+
+            trainer = WeightedTrainer(
+                model=model,
+                args=training_args,
+                compute_metrics=compute_metrics,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                class_weights=class_weights,
+                callbacks=[EarlyStoppingCallback(early_stopping_threshold=0.001, early_stopping_patience=2)],
+            )
+
+        # Balanced data
+        elif model_num == 2:
+            training_args = get_args(learning_rate=1e-5,    # Used for multimodal models in
+                                                            # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
+                                                            # UNITER, Chan et al. ECCV 2020
+                                     num_train_epochs=50)
+            trainer = CELTrainer(
+                model=model,
+                args=training_args,
+                compute_metrics=compute_metrics,
+                train_dataset=train_data,
+                eval_dataset=eval_data,
+                callbacks=[EarlyStoppingCallback(early_stopping_threshold=0.001, early_stopping_patience=10)]
+            )
+
+        else:
+            raise NotImplementedError
+
+        trainer.train()
+
+        # Save
+        torch.save(model.state_dict(),
+                   f'models{os.path.sep}multimodal-dict.pt' if model_num == 1 \
+                       else f'models{os.path.sep}bal-training_multimodal-dict.pt')
 
 if __name__ == "__main__":
     main()
-    writer.close()

@@ -26,8 +26,8 @@ Contact: clayton.durepos@maine.edu
 
 
 # Default ArtEmis dataset filename
-ARTEMIS_PATH = os.path.join( 'data', 'original_data', 'datasets', 'artemis_dataset_release_v0.csv')
-CONTRASTIVE_PATH = os.path.join( 'data', 'original_data', 'datasets', 'Contrastive.csv')
+ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'original_data','artemis_dataset_release_v0.csv')
+CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'original_data', 'Contrastive.csv')
 
 OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
 BALANCED_OUTPUT_FILE = os.path.join('data', 'datasets', 'balanced_artemis.csv')
@@ -113,70 +113,74 @@ def main():
     artemis_df = artemis_df.drop_duplicates(subset=['painting'])
 
     # Customized DF
-    artemis_df = artemis_df.rename(columns={'emotion':'labels', 'local_image_path':'local_image_path'})
+    filtered_df = artemis_df.copy()
+    filtered_df = filtered_df.rename(columns={'emotion':'labels', 'local_image_path':'local_image_path'})
 
     # Label train, eval, test
-    train_df, temp_df = train_test_split(artemis_df, test_size=(1-TRAIN_RATIO), random_state=42)
+    train_df, temp_df = train_test_split(filtered_df, test_size=(1-TRAIN_RATIO), random_state=42)
     eval_df, test_df = train_test_split(temp_df, test_size=(TEST_RATIO / (EVAL_RATIO + TEST_RATIO)), random_state=42)
 
     train_df["split"] = "train"
     eval_df["split"] = "eval"
     test_df["split"] = "test"
 
-    artemis_df = pd.concat([train_df, eval_df, test_df])
+    filtered_df = pd.concat([train_df, eval_df, test_df])
 
     # Reorder columns (Author's personal preference), remove "painting"
-    artemis_df = artemis_df[["local_image_path", "labels", "split"]]
+    filtered_df = filtered_df[["local_image_path", "labels", "split"]]
 
     # Save generated data to a new CSV file
     try:
-        artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
+        filtered_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
         print(f"Standard dataset saved to {OUTPUT_FILE}")
     except Exception as e:
         print(f"Error saving {OUTPUT_FILE} : {e}")
 
-    # Create balanced dataset from the filtered dataset
-    # (Samples with label that accounts for >=50% label volume)
+    # Create balanced dataset
+    # Add confidence score column (count/total_count)
+    artemis_df = artemis_df.merge(
+        dominant_emotions[['painting', 'count', 'total_count']],
+        on='painting'
+    )
+
+    artemis_df['confidence'] = artemis_df['count'] / artemis_df['total_count']
 
     # Find count of least frequent class
-    min_samples = artemis_df['labels'].value_counts().min()
-
-    # Add numeric check for least frequent label
-    print(f"Least frequent emotion has {min_samples} samples")
+    min_samples = artemis_df['emotion'].value_counts().min()
 
     # Create balanced dataset with equal samples per class
     balanced_df = pd.DataFrame()
     for emotion in LABEL_MAP.keys():
-
         # Get samples for this emotion
-        emotion_samples = artemis_df[artemis_df['labels'] == emotion].copy()
+        emotion_samples = artemis_df[artemis_df['emotion'] == emotion].copy()
 
-        # Sample randomly instead of taking the most confident ones
-        # If we have fewer samples than min_samples, take all of them
-        if len(emotion_samples) <= min_samples:
-            sampled_emotion = emotion_samples
+        # Sort by confidence score (highest first)
+        emotion_samples = emotion_samples.sort_values(by='confidence', ascending=False)
 
-        else:
-            sampled_emotion = emotion_samples.sample(n=min_samples, random_state=42)
+        # Take only the top min_samples entries
+        emotion_samples = emotion_samples.head(min_samples)
 
         # Add to balanced dataframe
-        balanced_df = pd.concat([balanced_df, sampled_emotion])
+        balanced_df = pd.concat([balanced_df, emotion_samples])
 
-    # Label train, eval, test
+    balanced_df = balanced_df.rename(columns={'emotion': 'labels', 'local_image_path': 'local_image_path'})
+
+    # Split into train/eval/test sets with stratification to maintain class balance
     train_df, temp_df = train_test_split(balanced_df, test_size=(1 - TRAIN_RATIO), random_state=42)
     eval_df, test_df = train_test_split(temp_df, test_size=(TEST_RATIO / (EVAL_RATIO + TEST_RATIO)), random_state=42)
 
     train_df["split"] = "train"
     eval_df["split"] = "eval"
     test_df["split"] = "test"
+
     balanced_df = pd.concat([train_df, eval_df, test_df])
 
-    # Reorder columns (Author's preference)
-    balanced_df = balanced_df[["local_image_path", "labels", "split"]]
+    # Reorder columns
+    balanced_df = balanced_df[["local_image_path", "split", "labels"]]
 
     # Print class distribution stats
     print("\nOriginal dataset class distribution:")
-    print(artemis_df['labels'].value_counts())
+    print(filtered_df['labels'].value_counts())
 
     print("\nBalanced dataset class distribution:")
     print(balanced_df['labels'].value_counts())
