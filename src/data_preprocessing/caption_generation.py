@@ -100,19 +100,15 @@ class CaptionGenerator:
 
 def main():
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_paths = [ os.path.join('data', 'datasets', 'custom_artemis.csv'),
-                 os.path.join('data', 'datasets', 'balanced_artemis.csv') ]
-    out_paths = [ os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv'),
-                  os.path.join('data', 'datasets', 'bal_multimodal_sentiment_dataset.csv') ]
+    in_path = os.path.join('data', 'datasets', 'custom_artemis.csv')
+    out_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()
-
-    for in_path, out_path in zip(in_paths, out_paths):
-        cap_gen.from_csv(in_path,
-                         out_path,
-                         prompt="USER: <image>\nCaption this painting\nASSISTANT:",
-                         batch_size=16) # Adjust to GPU (VRAM) capacity
+    cap_gen.from_csv(in_path,
+                     out_path,
+                     prompt="USER: <image>\nCaption this painting\nASSISTANT:",
+                     batch_size=16) # Adjust to GPU (VRAM) capacity
 
 if __name__ == "__main__":
     # Use this block for testing
