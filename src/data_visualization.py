@@ -63,7 +63,7 @@ def main():
 
             plt.xlabel("Prediction")
             plt.ylabel("Ground Truth")
-            plt.title(f"{ result_type.capitalize() } Confusion Matrix")
+            plt.title(f"{'Balanced Training' if training_type == 'bal-training_' else ''} { result_type.capitalize() } Confusion Matrix")
             plt.tight_layout()
             plt.savefig( os.path.join('data', 'plot', f'{training_type}{result_type}-matrix.png') )
 
