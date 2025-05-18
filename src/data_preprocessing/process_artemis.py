@@ -4,6 +4,9 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
+from collections import Counter
+import numpy as np
+
 """
 ArtEmis Dataset Processor
 
@@ -26,8 +29,8 @@ Contact: clayton.durepos@maine.edu
 
 
 # Default ArtEmis dataset filename
-ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'artemis_dataset_release_v0.csv')
-CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'Contrastive.csv')
+ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'original_data', 'artemis_dataset_release_v0.csv')
+CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'original_data', 'Contrastive.csv')
 
 OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
 
@@ -91,46 +94,37 @@ def main():
                     ), axis=1
     )
 
-    # Count number of labels per emotion for each painting
-    label_count = artemis_df.groupby(['painting', 'emotion']).size().reset_index(name='count')
+    # Map emotion labels to index
+    artemis_df['labels'] = artemis_df['emotion'].map(LABEL_MAP)
 
-    # Get total amount of labels per image
-    total_counts = label_count.groupby('painting')['count'].sum().reset_index(name='total_count')
+    grouped = artemis_df.groupby(['local_image_path'])
+    def compute_soft_label_vec(group):
+        counts = np.zeros(len(LABEL_MAP), dtype=np.float32)
+        for idx in group['labels']:
+            counts[idx] += 1
+        return counts / counts.sum()
 
-    # Merge
-    label_count = label_count.merge(total_counts, on='painting')
 
-    # Filter to only retain samples where dominant emotion accounts for >=50% of labels
-    label_count.sort_values(by=['painting', 'count'], ascending=[True, False], inplace=True)
-    dominant_emotions = label_count.groupby('painting').first().reset_index()
-    dominant_emotions = dominant_emotions[
-        dominant_emotions['count'] / dominant_emotions['total_count'] >= 0.5
-    ]
+    soft_label_df = grouped.apply(lambda g: pd.Series({
+        'soft_labels': compute_soft_label_vec(g).tolist()
+    })).reset_index()
 
-    # Merge with original dataframe
-    artemis_df = artemis_df.merge(dominant_emotions[['painting', 'emotion']], on=['painting', 'emotion'])
-    artemis_df = artemis_df.drop_duplicates(subset=['painting'])
-
-    # Customized DF
-    new = artemis_df[["emotion","local_image_path"]].copy()
-    new = new.rename(columns={'emotion':'labels', 'local_image_path':'local_image_path'})
+    artemis_df = artemis_df.merge(soft_label_df, on=['local_image_path'], how='left')
 
     # Label train, eval, test
-    train_df, temp_df = train_test_split(new, test_size=(1-TRAIN_RATIO), random_state=42)
+    train_df, temp_df = train_test_split(artemis_df, test_size=(1-TRAIN_RATIO), random_state=42)
     eval_df, test_df = train_test_split(temp_df, test_size=(TEST_RATIO / (EVAL_RATIO + TEST_RATIO)), random_state=42)
 
     train_df["split"] = "train"
     eval_df["split"] = "eval"
     test_df["split"] = "test"
 
-    new = pd.concat([train_df, eval_df, test_df])
-
-    # Reorder columns (Author's personal preference), remove "painting"
-    new = new[["local_image_path", "split", "labels"]]
+    artemis_df = pd.concat([train_df, eval_df, test_df])
+    artemis_df = artemis_df[["local_image_path", "split", "labels", "soft_labels"]]
 
     # Save generated data to a new CSV file
     try:
-        new.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
+        artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
 
     except Exception as e:
         print(f"Error saving {OUTPUT_FILE} : {e}")

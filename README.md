@@ -71,6 +71,7 @@ It is important to note that caption generation and model training can take espe
 multimodal-sentiment-analysis
 |--- data/
 |     |--- datasets/
+            |--- original_data/
 |     |--- evaluation/
 |     |--- plot/    
 |--- models/

@@ -1,3 +1,4 @@
+import ast
 import os
 import torch
 import pandas as pd
@@ -12,26 +13,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 dict_path = f'models{os.path.sep}bert-dict.pt'
 
-label_map = {
-    'amusement': 0,
-    'anger': 1,
-    'awe': 2,
-    'contentment': 3,
-    'disgust': 4,
-    'excitement': 5,
-    'fear': 6,
-    'sadness': 7,
-    'something else': 8
-}
-
 def main():
     os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
 
     # Load and pre-process testing data
     df = pd.read_csv(data_path)
 
-    test_df = df[df['split'] == 'test'].copy()[['caption', 'labels']]
-    test_df['labels'] = test_df['labels'].apply(lambda x: torch.tensor(label_map[x] ,dtype=torch.long) )
+    # Compute dominant label and confidence for each (image, caption)
+    group_stats = (
+        df.groupby(['local_image_path'])['labels']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    test_df = df[
+        (df['split'] == 'test') &
+        (df['labels'] == df['dominant_label'])
+    ][['caption', 'labels']]
 
     # Load model & tokenizer
     model = TextClassifier(base_model='google-bert/bert-base-cased', num_classes=9)
@@ -49,7 +53,7 @@ def main():
         return_tensors="pt"
     )
 
-    labels_tensor = torch.stack(test_df['labels'].tolist())
+    labels_tensor = torch.stack( test_df['labels'].apply( lambda x: torch.tensor(x, dtype=torch.long) ).tolist() )
     test_dataset = TensorDataset(tokens['input_ids'], tokens['attention_mask'], labels_tensor)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 

@@ -1,17 +1,11 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-
+import ast
 import torch
-import numpy as np
 import pandas as pd
 from PIL import Image
-from sklearn.utils.class_weight import compute_class_weight
 from src.classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, AutoTokenizer
-from src.model_training.training import (
-    get_args, compute_metrics, early_stopping_callback,
-    alpha_monitoring_callback, WeightedTrainer, writer
-)
+from src.model_training.training import get_args, compute_metrics, early_stopping_callback, KLTrainer
 
 """
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
@@ -22,17 +16,6 @@ Contact: clayton.durepos@maine.edu
 """
 
 DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
-label_map = {
-    'amusement': 0,
-    'anger': 1,
-    'awe': 2,
-    'contentment': 3,
-    'disgust': 4,
-    'excitement': 5,
-    'fear': 6,
-    'sadness': 7,
-    'something else': 8
-}
 
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -61,7 +44,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': label_map[ row['labels'] ]
+            'labels': row['labels']
         }
 
 
@@ -71,21 +54,12 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
-    # train_df = train_df.iloc[:int(len(train_df) * 0.01)]       # For testing
-
-    # Compute class weights
-    class_weights = compute_class_weight(class_weight='balanced',
-                                         classes=np.arange(len(label_map)),
-                                         y=train_df['labels'].map(label_map).tolist()
-                                         )
-
+    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'soft_labels']].copy()
+    train_df['labels'] = train_df['labels'].apply( lambda x: ast.literal_eval(x) )
     train_data = MMProcessingDataset(train_df)
 
     # Evaluation Data pre-processing
     eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']].copy()
-    # eval_df = eval_df.iloc[:int(len(eval_df) * 0.01)]    # For testing
-
     eval_data = MMProcessingDataset(eval_df)
 
     # Delete original DataFrame to free memory
@@ -95,17 +69,13 @@ def main():
     training_args = get_args(learning_rate=1e-5)         # Used for multimodal models in
                                                          # LXMERT, Tan and Bansal, EMNLP-IJCNLP 2019
                                                          # UNITER, Chan et al. ECCV 2020
-    trainer = WeightedTrainer(
+    trainer = KLTrainer(
         model=model,
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        class_weights=class_weights,
-        callbacks=[
-            early_stopping_callback,
-            alpha_monitoring_callback
-        ]
+        callbacks=[early_stopping_callback]
     )
 
     trainer.train()
@@ -113,4 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    writer.close()

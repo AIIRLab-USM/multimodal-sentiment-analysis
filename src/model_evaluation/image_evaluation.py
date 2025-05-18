@@ -15,18 +15,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 state_dict_path = f'models{os.path.sep}vit-dict.pt'
 data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 
-label_map = {
-    'amusement': 0,
-    'anger': 1,
-    'awe': 2,
-    'contentment': 3,
-    'disgust': 4,
-    'excitement': 5,
-    'fear': 6,
-    'sadness': 7,
-    'something else': 8
-}
-
 # Load tokenizer
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
 
@@ -55,7 +43,24 @@ def main():
     # Load testing data
     df = pd.read_csv(data_path)
 
-    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
+    # Compute dominant label and confidence for each (image, caption)
+    group_stats = (
+        df.groupby(['local_image_path'])['labels']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    test_df = df[
+        (df['split'] == 'test') &
+        (df['labels'] == df['dominant_label'])
+        ][['local_image_path', 'labels']]
+
     test_data = ImageProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 

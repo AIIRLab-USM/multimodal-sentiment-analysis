@@ -16,19 +16,6 @@ tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 dict_path = f'models{os.path.sep}multimodal-dict.pt'
 
-
-label_map = {
-    'amusement': 0,
-    'anger': 1,
-    'awe': 2,
-    'contentment': 3,
-    'disgust': 4,
-    'excitement': 5,
-    'fear': 6,
-    'sadness': 7,
-    'something else': 8
-}
-
 tqdm.pandas()
 
 class MMProcessingDataset(torch.utils.data.Dataset):
@@ -54,7 +41,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': label_map[ row['labels'] ],
+            'labels': row['labels'],
         }
 
 
@@ -64,7 +51,24 @@ def main():
     # Load testing data
     df = pd.read_csv(data_path)
 
-    test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'caption', 'labels']]
+    # Compute dominant label and confidence for each (image, caption)
+    group_stats = (
+        df.groupby(['local_image_path'])['labels']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    test_df = df[
+        (df['split'] == 'test') &
+        (df['labels'] == df['dominant_label'])
+        ][['local_image_path', 'caption', 'labels']]
+
     test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
