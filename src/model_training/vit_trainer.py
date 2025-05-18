@@ -41,15 +41,15 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 def main():
     os.makedirs('models', exist_ok=True)
 
-    df = pd.read_csv(DATA_PATH)[['split', 'local_image_path', 'labels']]
+    df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['caption', 'soft_labels']]
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'soft_labels']]
     train_data['labels'] = train_data['soft_labels'].apply(lambda x: ast.literal_eval(x))  # String to array
     train_data = ImageProcessingDataset(train_data)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
+    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'labels']]
     eval_data = ImageProcessingDataset(eval_data)
 
     # Delete original DataFrame to free memory
