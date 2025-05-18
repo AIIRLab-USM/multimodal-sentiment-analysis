@@ -2,74 +2,30 @@ import os
 import torch
 import torch.nn.functional as F
 from transformers import Trainer
-from transformers import TrainingArguments
+from torch.utils.tensorboard import SummaryWriter
+from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 """
 A small file for shared arguments across model training scripts
 
 Author: Clayton Durepos
-Version: 04.29.2025
+Version: 05.18.2025
 Contact: clayton.durepos@maine.edu
 """
 
-class FocalLoss(torch.nn.Module):
-    def __init__(self, gamma=2.0, weight=None, reduction='mean'):
-        super().__init__()
-        self.gamma = gamma
-        self.weight = weight
-        self.reduction = reduction
-
-    def forward(self, inputs, targets):
-        # Logarithm of probabilities \[ log(p_t) \]
-        logpt = F.log_softmax(inputs, dim=1)
-
-        # Retrieve \[ log(p_t) \] for ground-truth label
-        logpt = logpt.gather(1, targets.unsqueeze(1))
-        logpt = logpt.view(-1)
-
-        # Undo logarithm to retrieve \[ p_t \]
-        pt = torch.exp(logpt)
-
-        # Compute with focal loss formula
-        # \[ -w_t (1-p_t)^\gamma log(p_t) \]
-        focal_loss = -((1 - pt) ** self.gamma) * logpt
-        if self.weight is not None:
-            focal_loss = self.weight.gather(0, targets) * focal_loss
-
-        return focal_loss.mean()
-
-
-# Custom trainer for weighted classes
-class WeightedTrainer(Trainer):
-
-    # Overload to store class_weights - Constructor uses raw weights from sklearn.utils.class_weight.compute_class_weight for ease of use
-    def __init__(self, *args, class_weights=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.class_weights = torch.tensor(class_weights, dtype=torch.float) if class_weights is not None else None
-
-    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        logits = outputs.logits
-
-        # Initialize loss_function, dynamically move class_weights
-        loss_fn = FocalLoss( gamma=2.0, weight=self.class_weights.to( logits.device ) )
-        loss = loss_fn(inputs=logits, targets=labels)
-        return (loss, outputs) if return_outputs else loss
-
-# Custom Trainer for normal, external Cross Entropy Loss
-class CELTrainer(Trainer):
+# Custom trainer for KL Divergence Loss
+class KLTrainer(Trainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.loss_fn = torch.nn.KLDivLoss()
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
 
-        loss = self.criterion(input=logits, target=labels)
+        loss = self.loss_fn(input= F.log_softmax(logits, dim=1), target=labels)
         return (loss, outputs) if return_outputs else loss
 
 # Additional metrics for monitoring model performance
@@ -85,7 +41,7 @@ def compute_metrics(eval_pred):
     }
 
 # Function for maintaining common arguments where necessary
-def get_args(learning_rate:float, num_train_epochs:int=10):
+def get_args(learning_rate:float):
     return TrainingArguments(
             output_dir= os.path.join( 'src', 'model_training', 'trainer_output' ),
             remove_unused_columns=False,        # Model doesn't take labels - They should remain in inputs for loss_fn
@@ -100,7 +56,7 @@ def get_args(learning_rate:float, num_train_epochs:int=10):
 
             # Hyperparameters                   Reasoning, Citation
 
-            num_train_epochs=num_train_epochs,                # 10 epochs Used in UNITER, Chen et al., ECCV 2020
+            num_train_epochs=10,                # Used in UNITER, Chen et al., ECCV 2020
                                                 # ViLT, Kim et al., ICML 2021
                                                 # BERT, Devlin et al., NAACL 2019
 
@@ -124,3 +80,7 @@ def get_args(learning_rate:float, num_train_epochs:int=10):
             logging_steps=64,
             report_to="tensorboard"             # For visualizing metrics & performance
         )
+
+
+# Callbacks
+early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2, early_stopping_threshold=0.001)

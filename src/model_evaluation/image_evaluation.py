@@ -12,27 +12,8 @@ tqdm.pandas()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-state_dict_paths = [
-    f'models{os.path.sep}vit-dict.pt',
-    f'models{os.path.sep}bal-training_vit-dict.pt'
-]
-
-data_paths = [
-    os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv'),
-    os.path.join('data', 'datasets', 'bal_multimodal_sentiment_dataset.csv')
-]
-
-label_map = {
-    'amusement': 0,
-    'anger': 1,
-    'awe': 2,
-    'contentment': 3,
-    'disgust': 4,
-    'excitement': 5,
-    'fear': 6,
-    'sadness': 7,
-    'something else': 8
-}
+state_dict_path = f'models{os.path.sep}vit-dict.pt'
+data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 
 # Load tokenizer
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -59,70 +40,83 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 def main():
     os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
 
-    for state_dict_path, data_path in zip(state_dict_paths, data_paths):
-        save_name = 'image' if state_dict_path == state_dict_paths[0] \
-            else 'bal-training_image'
+    # Load testing data
+    df = pd.read_csv(data_path)
 
-        # Load testing data
-        df = pd.read_csv(data_path)
+    # Compute dominant label and confidence for each (image, caption)
+    group_stats = (
+        df.groupby(['local_image_path'])['labels']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
 
-        test_df = df[df['split'] == 'test'].copy()[['local_image_path', 'labels']]
-        test_data = ImageProcessingDataset(test_df)
-        test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
 
-        # Remove original DataFrame to free memory
-        del df
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    test_df = df[
+        (df['split'] == 'test') &
+        (df['labels'] == df['dominant_label'])
+        ][['local_image_path', 'labels']]
 
-        # Load model
-        model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
-        model.load_state_dict(torch.load(state_dict_path))
-        model.to(device)
-        model.eval()
+    test_data = ImageProcessingDataset(test_df)
+    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-        # Evaluation
-        all_preds = []
-        all_labels = []
-        with torch.no_grad():
-            for batch in tqdm(test_loader, desc="Evaluating"):
-                pixel_values = batch['pixel_values'].to(device)
-                labels = batch['labels'].to(device)
+    # Remove original DataFrame to free memory
+    del df
 
-                logits = model(pixel_values=pixel_values)['logits']
-                preds = logits.argmax(dim=1)
+    # Load model
+    model = ImageClassifier(base_model='google/vit-base-patch16-224', num_classes=9)
+    model.load_state_dict(torch.load(state_dict_path))
+    model.to(device)
+    model.eval()
 
-                all_preds.append(preds.cpu())
-                all_labels.append(labels.cpu())
+    # Evaluation
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for batch in tqdm(test_loader, desc="Evaluating"):
+            pixel_values = batch['pixel_values'].to(device)
+            labels = batch['labels'].to(device)
 
-        all_preds = torch.cat(all_preds, dim=0).numpy()
-        all_labels = torch.cat(all_labels, dim=0).numpy()
+            logits = model(pixel_values=pixel_values)['logits']
+            preds = logits.argmax(dim=1)
 
-        # Metrics
-        f1 = f1_score(all_labels, all_preds, average='macro')
-        precision = precision_score(all_labels, all_preds, average='macro')
-        recall = recall_score(all_labels, all_preds, average='macro')
-        acc = accuracy_score(all_labels, all_preds)
+            all_preds.append(preds.cpu())
+            all_labels.append(labels.cpu())
 
-        print(f"F1 Score (Macro): {f1:.4f}")
-        print(f"Precision (Macro): {precision:.4f}")
-        print(f"Recall (Macro): {recall:.4f}")
-        print(f"Accuracy: {acc:.4f}")
+    all_preds = torch.cat(all_preds, dim=0).numpy()
+    all_labels = torch.cat(all_labels, dim=0).numpy()
 
-        # Save metrics
-        metric_dict = {
-            'f1': f1,
-            'precision': precision,
-            'recall': recall,
-            'accuracy': acc
-        }
+    # Metrics
+    f1 = f1_score(all_labels, all_preds, average='macro')
+    precision = precision_score(all_labels, all_preds, average='macro')
+    recall = recall_score(all_labels, all_preds, average='macro')
+    acc = accuracy_score(all_labels, all_preds)
 
-        pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', f'{save_name}-metrics.csv'), index=False)
+    print(f"F1 Score (Macro): {f1:.4f}")
+    print(f"Precision (Macro): {precision:.4f}")
+    print(f"Recall (Macro): {recall:.4f}")
+    print(f"Accuracy: {acc:.4f}")
 
-        # Convert to integer for ease-of-use in reading
-        test_df['prediction'] = all_preds.astype(int).tolist()
-        test_df['labels'] = all_labels.astype(int).tolist()
+    # Save metrics
+    metric_dict = {
+        'f1': f1,
+        'precision': precision,
+        'recall': recall,
+        'accuracy': acc
+    }
 
-        # Save direct results
-        test_df.to_csv( os.path.join('data', 'evaluation', f'{save_name}-results.csv'), index=False)
+    pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', 'image_metrics.csv'), index=False)
+
+    # Convert to integer for ease-of-use in reading
+    test_df['prediction'] = all_preds.astype(int).tolist()
+    test_df['labels'] = all_labels.astype(int).tolist()
+
+    # Save direct results
+    test_df.to_csv( os.path.join('data', 'evaluation', 'image_results.csv'), index=False)
 
 if __name__ == "__main__":
     main()
