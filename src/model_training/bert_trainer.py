@@ -1,9 +1,11 @@
 import os
 import ast
+import numpy as np
 import pandas as pd
 from datasets import Dataset
 from src.classification_models import *
 from transformers import AutoTokenizer
+from sklearn.utils.class_weight import compute_class_weight
 from src.model_training.training import compute_metrics, get_args, early_stopping_callback, KLTrainer
 
 """
@@ -23,9 +25,16 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
+    train_data = df.loc[df['split'] == 'train'][['caption', 'labels', 'ground_truth']]
     train_data['labels'] = train_data['labels'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
-    train_data = Dataset.from_pandas(train_data, preserve_index=False)
+
+    # Get class_weights
+    class_weights = torch.tensor(
+        compute_class_weight(class_weight='balanced', classes=np.arange(9), y=train_data['ground_truth'].to_numpy()),
+        dtype=torch.float32
+    )
+
+    train_data = Dataset.from_pandas( train_data[['caption', 'labels']], preserve_index=False)
 
     # Evaluation Data pre-processing
     group_stats = (
@@ -72,6 +81,7 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
+        class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 

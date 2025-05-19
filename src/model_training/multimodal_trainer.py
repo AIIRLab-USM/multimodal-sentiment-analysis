@@ -1,10 +1,12 @@
 import os
 import ast
 import torch
+import numpy as np
 import pandas as pd
 from PIL import Image
 from src.classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, AutoTokenizer
+from sklearn.utils.class_weight import compute_class_weight
 from src.model_training.training import get_args, compute_metrics, early_stopping_callback, KLTrainer
 
 """
@@ -59,9 +61,16 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
-    train_df['labels'] = train_df['labels'].apply( lambda x: ast.literal_eval(x) )
-    train_data = MMProcessingDataset(train_df)
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels', 'ground_truth']].copy()
+    train_data['labels'] = train_data['labels'].apply( lambda x: ast.literal_eval(x) )
+
+    # Get class_weights
+    class_weights = torch.tensor(
+        compute_class_weight(class_weight='balanced', classes=np.arange(9), y=train_data['ground_truth'].to_numpy()),
+        dtype=torch.float32
+    )
+
+    train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'labels']] )
 
     # Evaluation Data pre-processing
     group_stats = (
@@ -96,6 +105,7 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
+        class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 
