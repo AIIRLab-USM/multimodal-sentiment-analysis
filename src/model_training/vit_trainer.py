@@ -51,7 +51,6 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels']]
     train_data['labels'] = train_data['labels'].apply(lambda x: ast.literal_eval(x))  # String to array
-    train_data = train_data.sample(frac=0.001, random_state=42)
     train_data = ImageProcessingDataset(train_data)
 
     # Evaluation Data pre-processing

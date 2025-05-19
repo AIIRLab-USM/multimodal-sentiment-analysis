@@ -26,7 +26,6 @@ def main():
     train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
     train_data['labels'] = train_data['labels'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
     train_data = Dataset.from_pandas(train_data, preserve_index=False)
-    train_data = train_data.select(range(int(len(train_data) * 0.01)))
 
     # Evaluation Data pre-processing
     group_stats = (
@@ -47,7 +46,6 @@ def main():
         ][['caption', 'labels', 'ground_truth']]
 
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
-    eval_data = eval_data.select( range( int( len(eval_data) * 0.01 ) ) )
 
     # Tokenize captions
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NM)
