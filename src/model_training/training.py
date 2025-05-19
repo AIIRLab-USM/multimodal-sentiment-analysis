@@ -2,8 +2,7 @@ import os
 import torch
 import torch.nn.functional as F
 from transformers import Trainer
-from torch.utils.tensorboard import SummaryWriter
-from transformers import TrainingArguments, EarlyStoppingCallback, TrainerCallback
+from transformers import TrainingArguments, EarlyStoppingCallback
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 """
@@ -25,8 +24,19 @@ class KLTrainer(Trainer):
         outputs = model(**inputs)
         logits = outputs.logits
 
-        loss = self.loss_fn(input= F.log_softmax(logits, dim=1), target=labels)
+        loss = self.loss_fn( input= F.log_softmax(logits, dim=1), target=labels.float() )
         return (loss, outputs) if return_outputs else loss
+
+    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+        inputs = self._prepare_inputs(inputs)
+
+        with torch.no_grad():
+            outputs = model(**inputs)
+        logits = outputs.logits
+
+        labels = inputs.get("ground_truth")
+        return None, logits, labels
+
 
 # Additional metrics for monitoring model performance
 def compute_metrics(eval_pred):

@@ -33,10 +33,15 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
         with Image.open(row['local_image_path']) as img:
             inputs = processor(images=img, return_tensors='pt')
 
-        return {
+        inputs = {
             'pixel_values': inputs['pixel_values'].squeeze(0),
             'labels': row['labels']
         }
+
+        if 'ground_truth' in self.df.columns:
+            inputs['ground_truth'] = row['ground_truth']
+
+        return inputs
 
 def main():
     os.makedirs('models', exist_ok=True)
@@ -44,12 +49,29 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'soft_labels']]
-    train_data['labels'] = train_data['soft_labels'].apply(lambda x: ast.literal_eval(x))  # String to array
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels']]
+    train_data['labels'] = train_data['labels'].apply(lambda x: ast.literal_eval(x))  # String to array
+    train_data = train_data.sample(frac=0.001, random_state=42)
     train_data = ImageProcessingDataset(train_data)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'labels']]
+    group_stats = (
+        df.groupby(['local_image_path'])['ground_truth']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    eval_data = df[
+        (df['split'] == 'eval') &
+        (df['ground_truth'] == df['dominant_label'])
+        ][['local_image_path', 'labels', 'ground_truth']]
+
     eval_data = ImageProcessingDataset(eval_data)
 
     # Delete original DataFrame to free memory

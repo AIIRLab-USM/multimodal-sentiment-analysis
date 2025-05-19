@@ -23,7 +23,7 @@ def main():
 
     # Class distribution chart
     df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
-    label_counts = df['labels'].value_counts().sort_index()
+    label_counts = df['ground_truth'].value_counts().sort_index()
 
     plt.figure(figsize=(10, 6))
     plt.bar(label_map.keys(), label_counts)
@@ -39,7 +39,7 @@ def main():
         curr_data_path = os.path.join('data', 'evaluation', result_type)
         result_df = pd.read_csv(f'{curr_data_path}_results.csv')
 
-        y_true = result_df['labels']
+        y_true = result_df['ground_truth']
         y_pred = result_df['prediction']
 
         cm = confusion_matrix(y_true, y_pred)

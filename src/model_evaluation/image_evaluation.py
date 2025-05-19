@@ -34,7 +34,7 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
         return {
             'pixel_values': inputs['pixel_values'].squeeze(0),
-            'labels': label_map[ row['labels'] ]
+            'ground_truth': row['ground_truth']
         }
 
 def main():
@@ -45,7 +45,7 @@ def main():
 
     # Compute dominant label and confidence for each (image, caption)
     group_stats = (
-        df.groupby(['local_image_path'])['labels']
+        df.groupby(['local_image_path'])['ground_truth']
         .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
         .apply(pd.Series)
     )
@@ -58,8 +58,8 @@ def main():
     df = df.merge(group_stats, on=['local_image_path'], how='inner')
     test_df = df[
         (df['split'] == 'test') &
-        (df['labels'] == df['dominant_label'])
-        ][['local_image_path', 'labels']]
+        (df['ground_truth'] == df['dominant_label'])
+        ][['local_image_path', 'ground_truth']]
 
     test_data = ImageProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
@@ -79,7 +79,7 @@ def main():
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Evaluating"):
             pixel_values = batch['pixel_values'].to(device)
-            labels = batch['labels'].to(device)
+            labels = batch['ground_truth'].to(device)
 
             logits = model(pixel_values=pixel_values)['logits']
             preds = logits.argmax(dim=1)
@@ -113,7 +113,7 @@ def main():
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
-    test_df['labels'] = all_labels.astype(int).tolist()
+    test_df['ground_truth'] = all_labels.astype(int).tolist()
 
     # Save direct results
     test_df.to_csv( os.path.join('data', 'evaluation', 'image_results.csv'), index=False)

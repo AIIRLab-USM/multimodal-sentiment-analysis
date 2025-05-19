@@ -95,7 +95,7 @@ def main():
     )
 
     # Map emotion labels to index
-    artemis_df['labels'] = artemis_df['emotion'].map(LABEL_MAP)
+    artemis_df['ground_truth'] = artemis_df['emotion'].map(LABEL_MAP)
 
     grouped = artemis_df.groupby(['local_image_path'])
     def compute_soft_label_vec(group):
@@ -106,7 +106,7 @@ def main():
 
 
     soft_label_df = grouped.apply(lambda g: pd.Series({
-        'soft_labels': compute_soft_label_vec(g).tolist()
+        'labels': compute_soft_label_vec(g).tolist()
     })).reset_index()
 
     artemis_df = artemis_df.merge(soft_label_df, on=['local_image_path'], how='left')
@@ -120,7 +120,7 @@ def main():
     test_df["split"] = "test"
 
     artemis_df = pd.concat([train_df, eval_df, test_df])
-    artemis_df = artemis_df[["local_image_path", "split", "labels", "soft_labels"]]
+    artemis_df = artemis_df[["local_image_path", "split", "labels", "ground_truth"]]
 
     # Save generated data to a new CSV file
     try:

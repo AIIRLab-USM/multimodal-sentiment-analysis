@@ -41,7 +41,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': row['labels'],
+            'ground_truth': row['ground_truth'],
         }
 
 
@@ -53,7 +53,7 @@ def main():
 
     # Compute dominant label and confidence for each (image, caption)
     group_stats = (
-        df.groupby(['local_image_path'])['labels']
+        df.groupby(['local_image_path'])['ground_truth']
         .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
         .apply(pd.Series)
     )
@@ -66,8 +66,8 @@ def main():
     df = df.merge(group_stats, on=['local_image_path'], how='inner')
     test_df = df[
         (df['split'] == 'test') &
-        (df['labels'] == df['dominant_label'])
-        ][['local_image_path', 'caption', 'labels']]
+        (df['ground_truth'] == df['dominant_label'])
+        ][['local_image_path', 'caption', 'ground_truth']]
 
     test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
@@ -87,7 +87,7 @@ def main():
             pixel_values = batch['pixel_values'].to(device)
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
+            labels = batch['ground_truth'].to(device)
 
             logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
             preds = logits.argmax(dim=1)
@@ -121,7 +121,7 @@ def main():
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
-    test_df['labels'] = all_labels.astype(int).tolist()
+    test_df['ground_truth'] = all_labels.astype(int).tolist()
 
     # Save direct results
     test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)

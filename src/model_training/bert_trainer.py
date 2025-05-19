@@ -1,13 +1,9 @@
 import os
 import ast
-import numpy as np
 import pandas as pd
-from datasets import Dataset, Sequence, Value, Features
-from sympy import false
-
+from datasets import Dataset
 from src.classification_models import *
 from transformers import AutoTokenizer
-from sklearn.utils.class_weight import compute_class_weight
 from src.model_training.training import compute_metrics, get_args, early_stopping_callback, KLTrainer
 
 """
@@ -27,13 +23,31 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['caption', 'soft_labels']]
-    train_data['labels'] = train_data['soft_labels'].apply( lambda x: ast.literal_eval(x) ) # String to array
+    train_data = df.loc[df['split'] == 'train'][['caption', 'labels']]
+    train_data['labels'] = train_data['labels'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
     train_data = Dataset.from_pandas(train_data, preserve_index=False)
+    train_data = train_data.select(range(int(len(train_data) * 0.01)))
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels']]
+    group_stats = (
+        df.groupby(['local_image_path'])['ground_truth']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    eval_data = df[
+        (df['split'] == 'eval') &
+        (df['ground_truth'] == df['dominant_label'])
+        ][['caption', 'labels', 'ground_truth']]
+
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
+    eval_data = eval_data.select( range( int( len(eval_data) * 0.01 ) ) )
 
     # Tokenize captions
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NM)

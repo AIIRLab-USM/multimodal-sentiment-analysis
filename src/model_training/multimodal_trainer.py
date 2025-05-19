@@ -40,12 +40,17 @@ class MMProcessingDataset(torch.utils.data.Dataset):
                                    add_special_tokens=True,
                                    return_tensors="pt")
 
-        return {
+        inputs = {
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
             'labels': row['labels']
         }
+
+        if 'ground_truth' in self.df.columns:
+            inputs['ground_truth'] = row['ground_truth']
+
+        return inputs
 
 
 def main():
@@ -54,13 +59,29 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'soft_labels']].copy()
+    train_df = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels']].copy()
     train_df['labels'] = train_df['labels'].apply( lambda x: ast.literal_eval(x) )
     train_data = MMProcessingDataset(train_df)
 
     # Evaluation Data pre-processing
-    eval_df = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels']].copy()
-    eval_data = MMProcessingDataset(eval_df)
+    group_stats = (
+        df.groupby(['local_image_path'])['ground_truth']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] >= 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge directly into df to get confident samples
+    df = df.merge(group_stats, on=['local_image_path'], how='inner')
+    eval_data = df[
+        (df['split'] == 'eval') &
+        (df['ground_truth'] == df['dominant_label'])
+        ][['local_image_path', 'caption', 'labels', 'ground_truth']]
+
+    eval_data = MMProcessingDataset(eval_data)
 
     # Delete original DataFrame to free memory
     del df

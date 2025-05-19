@@ -29,7 +29,7 @@ class TextClassifier(Classifier):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
 
-    def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None, **kwargs):
         outputs = self.base(input_ids=input_ids,
                            attention_mask=attention_mask,
                            token_type_ids=token_type_ids)
@@ -42,7 +42,7 @@ class ImageClassifier(Classifier):
         super().__init__(base_model)
         self.classifier = MLPHeader(self.base.config.hidden_size, num_classes)
 
-    def forward(self, pixel_values, labels=None):
+    def forward(self, pixel_values, **kwargs):
         outputs = self.base(pixel_values=pixel_values)
 
         logits = self.classifier(outputs.pooler_output)
@@ -65,7 +65,7 @@ class MultimodalClassifier(nn.Module):
         # Classification head
         self.classifier = MLPHeader(self.text_model.config.hidden_size+self.image_model.config.hidden_size,9)
 
-    def forward(self, pixel_values, input_ids, attention_mask, token_type_ids=None, labels=None):
+    def forward(self, pixel_values, input_ids, attention_mask, token_type_ids=None, **kwargs):
         image_outputs = self.image_model(pixel_values)
         text_outputs = self.text_model(input_ids=input_ids,
                                        attention_mask=attention_mask,

@@ -21,7 +21,7 @@ def main():
 
     # Compute dominant label and confidence for each (image, caption)
     group_stats = (
-        df.groupby(['local_image_path'])['labels']
+        df.groupby(['local_image_path'])['ground_truth']
         .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
         .apply(pd.Series)
     )
@@ -34,8 +34,8 @@ def main():
     df = df.merge(group_stats, on=['local_image_path'], how='inner')
     test_df = df[
         (df['split'] == 'test') &
-        (df['labels'] == df['dominant_label'])
-    ][['caption', 'labels']]
+        (df['ground_truth'] == df['dominant_label'])
+    ][['caption', 'ground_truth']]
 
     # Load model & tokenizer
     model = TextClassifier(base_model='google-bert/bert-base-cased', num_classes=9)
@@ -53,7 +53,7 @@ def main():
         return_tensors="pt"
     )
 
-    labels_tensor = torch.stack( test_df['labels'].apply( lambda x: torch.tensor(x, dtype=torch.long) ).tolist() )
+    labels_tensor = torch.stack( test_df['ground_truth'].apply( lambda x: torch.tensor(x, dtype=torch.long) ).tolist() )
     test_dataset = TensorDataset(tokens['input_ids'], tokens['attention_mask'], labels_tensor)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
@@ -100,7 +100,7 @@ def main():
 
     # Convert to integer for ease-of-use in reading
     test_df['prediction'] = all_preds.astype(int).tolist()
-    test_df['labels'] = all_labels.astype(int).tolist()
+    test_df['ground_truth'] = all_labels.astype(int).tolist()
 
     # Save direct results
     test_df.to_csv( os.path.join('data', 'evaluation', 'text_results.csv'), index=False)
