@@ -89,7 +89,6 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 
