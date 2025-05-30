@@ -63,13 +63,6 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels', 'ground_truth']].copy()
     train_data['labels'] = train_data['labels'].apply( lambda x: ast.literal_eval(x) )
-
-    # Get class_weights
-    class_weights = torch.tensor(
-        compute_class_weight(class_weight='balanced', classes=np.arange(9), y=train_data['ground_truth'].to_numpy()),
-        dtype=torch.float32
-    )
-
     train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'labels']] )
 
     # Evaluation Data pre-processing

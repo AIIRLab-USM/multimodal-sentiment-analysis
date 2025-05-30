@@ -27,13 +27,6 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'labels', 'ground_truth']]
     train_data['labels'] = train_data['labels'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
-
-    # Get class_weights
-    class_weights = torch.tensor(
-        compute_class_weight(class_weight='balanced', classes=np.arange(9), y=train_data['ground_truth'].to_numpy()),
-        dtype=torch.float32
-    )
-
     train_data = Dataset.from_pandas( train_data[['caption', 'labels']], preserve_index=False)
 
     # Evaluation Data pre-processing
@@ -81,7 +74,7 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        class_weights=class_weights,
+        # class_weights=class_weights,
         callbacks=[early_stopping_callback]
     )
 

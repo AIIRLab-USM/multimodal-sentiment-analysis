@@ -54,13 +54,6 @@ def main():
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels', 'ground_truth']]
     train_data['labels'] = train_data['labels'].apply(lambda x: ast.literal_eval(x))  # String to array
-
-    # Get class_weights
-    class_weights = torch.tensor(
-        compute_class_weight(class_weight='balanced', classes=np.arange(9), y=train_data['ground_truth'].to_numpy() ),
-        dtype=torch.float32
-    )
-
     train_data = ImageProcessingDataset( train_data[['local_image_path', 'labels']] )
 
     # Evaluation Data pre-processing

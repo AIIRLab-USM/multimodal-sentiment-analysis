@@ -15,20 +15,12 @@ Contact: clayton.durepos@maine.edu
 
 # Custom trainer for KL Divergence Loss
 class KLTrainer(Trainer):
-    def __init__(self, *args, class_weights=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.weights = class_weights
-
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
 
-        loss = F.kl_div( input= F.log_softmax(logits, dim=1), target=labels.float(), reduction='none' )
-        if self.weights is not None:
-            loss = (loss * self.weights.to( loss.device ) )
-
-        loss = loss.sum(dim=1).mean()
+        loss = F.kl_div( input= F.log_softmax(logits, dim=1), target=labels.float(), reduction='mean' )
         return (loss, outputs) if return_outputs else loss
 
     def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
