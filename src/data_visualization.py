@@ -5,7 +5,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
-result_types = ["text", "image", "multimodal"]
+result_types = ["text",
+                "image",
+                "multimodal"
+                ]
 label_map = {
     'amusement': 0,
     'anger': 1,
@@ -39,8 +42,8 @@ def main():
         curr_data_path = os.path.join('data', 'evaluation', result_type)
         result_df = pd.read_csv(f'{curr_data_path}_results.csv')
 
-        y_true = result_df['ground_truth']
-        y_pred = result_df['prediction']
+        y_true = result_df['true_label']
+        y_pred = result_df['pred_label']
 
         cm = confusion_matrix(y_true, y_pred)
         cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -55,7 +58,7 @@ def main():
         plt.ylabel("Ground Truth")
         plt.title(f"{ result_type.capitalize() } Confusion Matrix")
         plt.tight_layout()
-        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.png') )
+        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix_2.png') )
 
 if __name__ == "__main__":
     main()

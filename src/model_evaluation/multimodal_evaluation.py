@@ -1,8 +1,10 @@
 import os
+import ast
+import json
 import torch
 import pandas as pd
-from tqdm import tqdm
 from PIL import Image
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformers import AutoProcessor, AutoTokenizer
 from src.classification_models import MultimodalClassifier
@@ -16,12 +18,13 @@ tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
 dict_path = f'models{os.path.sep}multimodal-dict.pt'
 
-tqdm.pandas()
+def round_list(lst):
+    return [round(float(x), 3) for x in lst]
 
 class MMProcessingDataset(torch.utils.data.Dataset):
     def __init__(self, df):
         super().__init__()
-        self.df = df
+        self.df = df.reset_index(drop=True)
 
     def __len__(self):
         return len(self.df)
@@ -37,19 +40,22 @@ class MMProcessingDataset(torch.utils.data.Dataset):
                                    add_special_tokens=True,
                                    return_tensors="pt")
 
-        return {
-            'pixel_values': img_inputs['pixel_values'].squeeze(0),
-            'input_ids': txt_inputs['input_ids'].squeeze(0),
-            'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'ground_truth': row['ground_truth'],
-        }
-
+        return (
+            img_inputs['pixel_values'].squeeze(0),                      # pixeL_values
+            txt_inputs['input_ids'].squeeze(0),                         # input_ids
+            txt_inputs['attention_mask'].squeeze(0),                    # attention_mask
+            row['ground_truth'],                                        # true_labels
+            row['labels'],                                              # true_dists
+        )
 
 def main():
     os.makedirs(f'data{os.path.sep}evaluation', exist_ok=True)
 
     # Load testing data
     df = pd.read_csv(data_path)
+    df['labels'] = df['labels'].apply(
+        lambda x: torch.tensor(ast.literal_eval(x))
+    )
 
     # Compute dominant label and confidence for each (image, caption)
     group_stats = (
@@ -57,74 +63,73 @@ def main():
         .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
         .apply(pd.Series)
     )
-
     group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] >= 0.5]
-    group_stats.reset_index(inplace=True)
+    group_stats = group_stats[group_stats['confidence'] >= 0.5].reset_index()
 
     # Merge directly into df to get confident samples
     df = df.merge(group_stats, on=['local_image_path'], how='inner')
     test_df = df[
         (df['split'] == 'test') &
         (df['ground_truth'] == df['dominant_label'])
-        ][['local_image_path', 'caption', 'ground_truth']]
+    ][['local_image_path', 'caption', 'ground_truth', 'labels']].reset_index(drop=True)
 
+    # Build dataset + loader
     test_data = MMProcessingDataset(test_df)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-    # Remove original DataFrame to free memory
-    del df
-
     # Load model
     model = MultimodalClassifier()
-    model.load_state_dict( torch.load( dict_path )   )
-    model = model.to(device).eval()
+    model.load_state_dict(torch.load(dict_path))
+    model.to(device)
+    model.eval()
 
-    all_preds = []
-    all_labels = []
+    # Run evaluation
+    all_true_labels = []
+    all_true_dists = []
+    all_pred_labels = []
+    all_pred_dists = []
+
     with torch.no_grad():
-        for batch in tqdm(test_loader, desc="Evaluating"):
-            pixel_values = batch['pixel_values'].to(device)
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['ground_truth'].to(device)
+        for pixel_values, input_ids, attention_mask, true_labels, true_dists in tqdm(test_loader, desc="Evaluating"):
+            logits = model(pixel_values= pixel_values.to(device) , input_ids= input_ids.to(device) , attention_mask= attention_mask.to(device) )['logits']
+            probs = torch.softmax(logits, dim=-1)
+            preds = torch.argmax(probs, dim=1)
 
-            logits = model(pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask)['logits']
-            preds = logits.argmax(dim=1)
+            all_true_labels.extend(true_labels.cpu().numpy().tolist())
+            all_true_dists.extend(true_dists.cpu().numpy().tolist())
+            all_pred_labels.extend(preds.cpu().numpy().tolist())
+            all_pred_dists.extend(probs.cpu().numpy().tolist())
 
-            all_preds.append(preds.cpu())
-            all_labels.append(labels.cpu())
+    f1 = f1_score(all_true_labels, all_pred_labels, average='macro')
+    precision = precision_score(all_true_labels, all_pred_labels, average='macro')
+    recall = recall_score(all_true_labels, all_pred_labels, average='macro')
+    acc = accuracy_score(all_true_labels, all_pred_labels)
 
-    all_preds = torch.cat(all_preds, dim=0).numpy()
-    all_labels = torch.cat(all_labels, dim=0).numpy()
-
-    # Metrics
-    f1 = f1_score(all_labels, all_preds, average='macro')
-    precision = precision_score(all_labels, all_preds, average='macro')
-    recall = recall_score(all_labels, all_preds, average='macro')
-    acc = accuracy_score(all_labels, all_preds)
-
-    print(f"F1 Score (Macro): {f1:.4f}")
+    print(f"\nF1 Score (Macro): {f1:.4f}")
     print(f"Precision (Macro): {precision:.4f}")
     print(f"Recall (Macro): {recall:.4f}")
     print(f"Accuracy: {acc:.4f}")
 
     # Save metrics
-    metric_dict = {
-        'f1': f1,
-        'precision': precision,
-        'recall': recall,
-        'accuracy': acc
-    }
+    pd.DataFrame({
+        'f1': [f1],
+        'precision': [precision],
+        'recall': [recall],
+        'accuracy': [acc]
+    }).to_csv(os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
 
-    pd.DataFrame(metric_dict, index=['1']).to_csv( os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
+    all_true_dists = [json.dumps(round_list(vec)) for vec in all_true_dists]
+    all_pred_dists = [json.dumps(round_list(vec)) for vec in all_pred_dists]
 
-    # Convert to integer for ease-of-use in reading
-    test_df['prediction'] = all_preds.astype(int).tolist()
-    test_df['ground_truth'] = all_labels.astype(int).tolist()
-
-    # Save direct results
-    test_df.to_csv( os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)
+    result_df = pd.DataFrame({
+        'local_image_path': list(test_df['local_image_path']),
+        'caption': list(test_df['caption']),
+        'true_label': all_true_labels,
+        'pred_label': all_pred_labels,
+        'true_dist': all_true_dists,
+        'pred_dist': all_pred_dists
+    })
+    result_df.to_csv(os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)
 
 if __name__ == "__main__":
     main()
