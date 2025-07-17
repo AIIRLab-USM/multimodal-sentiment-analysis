@@ -30,7 +30,7 @@ def main():
     train_data = Dataset.from_pandas( train_data[['caption', 'labels']], preserve_index=False)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['caption', 'ground_truth']].copy()
+    eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels', 'ground_truth']].copy()
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
 
     # Tokenize captions
