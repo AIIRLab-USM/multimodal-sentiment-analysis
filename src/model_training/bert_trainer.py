@@ -12,7 +12,7 @@ from src.model_training.training import compute_metrics, get_args, early_stoppin
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 05.18.2025
+Version: 07.17.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -30,23 +30,7 @@ def main():
     train_data = Dataset.from_pandas( train_data[['caption', 'labels']], preserve_index=False)
 
     # Evaluation Data pre-processing
-    group_stats = (
-        df.groupby(['local_image_path'])['ground_truth']
-        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
-        .apply(pd.Series)
-    )
-
-    group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] >= 0.5]
-    group_stats.reset_index(inplace=True)
-
-    # Merge directly into df to get confident samples
-    df = df.merge(group_stats, on=['local_image_path'], how='inner')
-    eval_data = df[
-        (df['split'] == 'eval') &
-        (df['ground_truth'] == df['dominant_label'])
-        ][['caption', 'labels', 'ground_truth']]
-
+    eval_data = df.loc[df['split'] == 'eval'][['caption', 'ground_truth']].copy()
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
 
     # Tokenize captions

@@ -23,7 +23,7 @@ This Python script processes the ArtEmis dataset by:
     3. Save generated dataset to a new CSV file
     
 Author: Clayton Durepos
-Version: 04.11.2025
+Version: 07.17.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -51,6 +51,8 @@ EVAL_RATIO = 0.1
 TEST_RATIO = 0.1
 
 tqdm.pandas()
+
+# ... previous imports and constants remain the same ...
 
 def main():
     """
@@ -100,7 +102,7 @@ def main():
     grouped = artemis_df.groupby(['local_image_path'])
     def compute_soft_label_vec(group):
         counts = np.zeros(len(LABEL_MAP), dtype=np.float32)
-        for idx in group['labels']:
+        for idx in group['ground_truth']:
             counts[idx] += 1
         return counts / counts.sum()
 
@@ -119,13 +121,31 @@ def main():
     eval_df["split"] = "eval"
     test_df["split"] = "test"
 
-    artemis_df = pd.concat([train_df, eval_df, test_df])
-    artemis_df = artemis_df[["local_image_path", "split", "labels", "ground_truth"]]
+    full_df = pd.concat([train_df, eval_df, test_df])
 
-    # Save generated data to a new CSV file
+    # Compute dominant labels and filter eval/test samples
+    group_stats = (
+        full_df.groupby(['local_image_path'])['ground_truth']
+        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
+        .apply(pd.Series)
+    )
+    group_stats.columns = ['dominant_label', 'confidence']
+    group_stats = group_stats[group_stats['confidence'] > 0.5]
+    group_stats.reset_index(inplace=True)
+
+    # Merge to get confident eval/test samples
+    full_df = full_df.merge(group_stats, on='local_image_path', how='left')
+
+    # Keep all train samples + confident eval/test
+    filtered_df = full_df[
+        (full_df['split'] == 'train') |
+        ((full_df['split'] != 'train') & (full_df['ground_truth'] == full_df['dominant_label']))
+    ]
+
+    final_df = filtered_df[["local_image_path", "split", "labels", "ground_truth"]]
+
     try:
-        artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
-
+        final_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
     except Exception as e:
         print(f"Error saving {OUTPUT_FILE} : {e}")
 

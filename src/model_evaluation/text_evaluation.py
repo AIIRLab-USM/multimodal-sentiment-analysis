@@ -9,6 +9,14 @@ from src.classification_models import TextClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from torch.utils.data import DataLoader, TensorDataset
 
+"""
+A short script for evaluating a fine-tuned BERT model
+
+Author: Clayton Durepos
+Version: 07.17.2025
+Contact: clayton.durepos@maine.edu
+"""
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
@@ -23,25 +31,8 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-
-    # Compute dominant label + confidence
-    group_stats = (
-        df.groupby(['local_image_path'])['ground_truth']
-        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
-        .apply(pd.Series)
-    )
-    group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] >= 0.5].reset_index()
-
-    # Merge directly into df to get confident samples
-    df = df.merge(group_stats, on=['local_image_path'], how='inner')
-    test_df = df[
-        (df['split'] == 'test') &
-        (df['ground_truth'] == df['dominant_label'])
-    ][['caption', 'ground_truth', 'labels']]
-
-    # Parse soft label vectors from string to list
-    test_df['labels'] = test_df['labels'].apply(ast.literal_eval)
+    test_df = df.loc[df['split'] == 'test']['local_image_path', 'ground_truth', 'labels']
+    test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
 
     # Prepare tensors
     captions = list(test_df['caption'])

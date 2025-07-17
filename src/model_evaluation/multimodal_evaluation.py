@@ -10,6 +10,14 @@ from transformers import AutoProcessor, AutoTokenizer
 from src.classification_models import MultimodalClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
+"""
+A short script for evaluating a fine-tuned ViT & BERT multimodal model
+
+Author: Clayton Durepos
+Version: 07.17.2025
+Contact: clayton.durepos@maine.edu
+"""
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -53,25 +61,8 @@ def main():
 
     # Load testing data
     df = pd.read_csv(data_path)
-    df['labels'] = df['labels'].apply(
-        lambda x: torch.tensor(ast.literal_eval(x))
-    )
-
-    # Compute dominant label and confidence for each (image, caption)
-    group_stats = (
-        df.groupby(['local_image_path'])['ground_truth']
-        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
-        .apply(pd.Series)
-    )
-    group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] >= 0.5].reset_index()
-
-    # Merge directly into df to get confident samples
-    df = df.merge(group_stats, on=['local_image_path'], how='inner')
-    test_df = df[
-        (df['split'] == 'test') &
-        (df['ground_truth'] == df['dominant_label'])
-    ][['local_image_path', 'caption', 'ground_truth', 'labels']].reset_index(drop=True)
+    test_df = df.loc[df['split'] == 'test']['local_image_path', 'caption', 'ground_truth', 'labels']
+    test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
 
     # Build dataset + loader
     test_data = MMProcessingDataset(test_df)

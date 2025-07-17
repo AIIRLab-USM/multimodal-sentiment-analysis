@@ -13,7 +13,7 @@ from src.model_training.training import get_args, compute_metrics, early_stoppin
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 05.04.2025
+Version: 07.17.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -66,24 +66,9 @@ def main():
     train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'labels']] )
 
     # Evaluation Data pre-processing
-    group_stats = (
-        df.groupby(['local_image_path'])['ground_truth']
-        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
-        .apply(pd.Series)
-    )
-
-    group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] >= 0.5]
-    group_stats.reset_index(inplace=True)
-
-    # Merge directly into df to get confident samples
-    df = df.merge(group_stats, on=['local_image_path'], how='inner')
-    eval_data = df[
-        (df['split'] == 'eval') &
-        (df['ground_truth'] == df['dominant_label'])
-        ][['local_image_path', 'caption', 'labels', 'ground_truth']]
-
-    eval_data = MMProcessingDataset(eval_data)
+    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels', 'ground_truth']].copy()
+    eval_data['labels'] = eval_data['labels'].apply( lambda x: ast.literal_eval(x) )
+    eval_data = MMProcessingDataset( eval_data )
 
     # Delete original DataFrame to free memory
     del df

@@ -5,6 +5,14 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
+"""
+A short script for creating visual data using model evaluation data
+
+Author: Clayton Durepos
+Version: 07.17.2025
+Contact: clayton.durepos@maine.edu
+"""
+
 result_types = ["text",
                 "image",
                 "multimodal"
@@ -21,13 +29,7 @@ label_map = {
     'something else': 8
 }
 
-def main():
-    os.makedirs(f'data{os.path.sep}plot', exist_ok=True)
-
-    # Class distribution chart
-    df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
-    label_counts = df['ground_truth'].value_counts().sort_index()
-
+def artemis_distribution_chart(label_counts, file_name):
     plt.figure(figsize=(10, 6))
     plt.bar(label_map.keys(), label_counts)
     plt.xticks(rotation=45)
@@ -36,6 +38,20 @@ def main():
     plt.ylabel("Number of Samples")
     plt.tight_layout()
     plt.savefig(os.path.join('data', 'plot', 'class_distribution.png'))
+
+
+def main():
+    os.makedirs(f'data{os.path.sep}plot', exist_ok=True)
+
+    # Total class distribution chart
+    df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
+    label_counts = df['ground_truth'].value_counts().sort_index()
+    artemis_distribution_chart(label_counts, os.path.join('data', 'plot', 'global_class_distribution.png'))
+
+    for split in ['train', 'eval', 'test']:
+        curr_df = df.loc[df['split'] == split]
+        label_counts = curr_df['ground_truth'].value_counts().sort_index()
+        artemis_distribution_chart(label_counts, os.path.join('data', 'plot', f'{split}_class_distribution.png'))
 
     # Confusion matrices for each modality
     for result_type in result_types:
