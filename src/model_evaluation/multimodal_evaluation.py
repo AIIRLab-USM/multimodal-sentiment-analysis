@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A short script for evaluating a fine-tuned ViT & BERT multimodal model
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.01.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -53,7 +53,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             txt_inputs['input_ids'].squeeze(0),                         # input_ids
             txt_inputs['attention_mask'].squeeze(0),                    # attention_mask
             row['ground_truth'],                                        # true_labels
-            row['labels'],                                              # true_dists
+            torch.tensor(row['labels']),                                # true_dists
         )
 
 def main():
@@ -61,7 +61,7 @@ def main():
 
     # Load testing data
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test']['local_image_path', 'caption', 'ground_truth', 'labels']
+    test_df = df.loc[df['split'] == 'test'][['local_image_path', 'caption', 'ground_truth', 'labels']]
     test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
 
     # Build dataset + loader
@@ -79,10 +79,19 @@ def main():
     all_true_dists = []
     all_pred_labels = []
     all_pred_dists = []
+    all_attn_weights_text = []
+    all_attn_weights_image = []
 
     with torch.no_grad():
         for pixel_values, input_ids, attention_mask, true_labels, true_dists in tqdm(test_loader, desc="Evaluating"):
-            logits = model(pixel_values= pixel_values.to(device) , input_ids= input_ids.to(device) , attention_mask= attention_mask.to(device) )['logits']
+            outputs, attn_weights = model(
+                pixel_values=pixel_values.to(device),
+                input_ids=input_ids.to(device),
+                attention_mask=attention_mask.to(device),
+                return_weights=True
+            )
+
+            logits = outputs.logits
             probs = torch.softmax(logits, dim=-1)
             preds = torch.argmax(probs, dim=1)
 
@@ -91,6 +100,11 @@ def main():
             all_pred_labels.extend(preds.cpu().numpy().tolist())
             all_pred_dists.extend(probs.cpu().numpy().tolist())
 
+            attn_weights = attn_weights.cpu().numpy()
+            all_attn_weights_text.extend(attn_weights[:, 0].tolist())
+            all_attn_weights_image.extend(attn_weights[:, 1].tolist())
+
+    # Compute metrics
     f1 = f1_score(all_true_labels, all_pred_labels, average='macro')
     precision = precision_score(all_true_labels, all_pred_labels, average='macro')
     recall = recall_score(all_true_labels, all_pred_labels, average='macro')
@@ -109,18 +123,19 @@ def main():
         'accuracy': [acc]
     }).to_csv(os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
 
-    all_true_dists = [json.dumps(round_list(vec)) for vec in all_true_dists]
-    all_pred_dists = [json.dumps(round_list(vec)) for vec in all_pred_dists]
-
+    # Save results
     result_df = pd.DataFrame({
         'local_image_path': list(test_df['local_image_path']),
         'caption': list(test_df['caption']),
         'true_label': all_true_labels,
         'pred_label': all_pred_labels,
-        'true_dist': all_true_dists,
-        'pred_dist': all_pred_dists
+        'true_dist': [json.dumps(round_list(vec)) for vec in all_true_dists],
+        'pred_dist': [json.dumps(round_list(vec)) for vec in all_pred_dists],
+        'text_weight': [round(float(w), 4) for w in all_attn_weights_text],
+        'image_weight': [round(float(w), 4) for w in all_attn_weights_image]
     })
     result_df.to_csv(os.path.join('data', 'evaluation', 'multimodal_results.csv'), index=False)
+
 
 if __name__ == "__main__":
     main()

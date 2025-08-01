@@ -9,25 +9,44 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A small file for shared arguments across model training scripts
 
 Author: Clayton Durepos
-Version: 05.18.2025
+Version: 08.01.2025
 Contact: clayton.durepos@maine.edu
 """
 
 # Custom trainer for KL Divergence Loss
 class KLTrainer(Trainer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        logits = outputs.logits
+        try:
+            outputs, attn_weights = model(**inputs, return_weights=True)
+        except:
+            outputs = model(**inputs)
+            attn_weights = None
 
+        logits = outputs.logits
         loss = F.kl_div( input= F.log_softmax(logits, dim=1), target=labels.float(), reduction='mean' )
+
+        # Log attention weights only if they exist
+        if attn_weights is not None and \
+            self.state.global_step % self.args.logging_steps == 0:
+                self.log({
+                    "attn_weights/text": attn_weights[:, 0].mean().item(),
+                    "attn_weights/image": attn_weights[:, 1].mean().item(),
+                })
+
         return (loss, outputs) if return_outputs else loss
 
     def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
         inputs = self._prepare_inputs(inputs)
 
         with torch.no_grad():
-            outputs = model(**inputs)
+            try:
+                outputs, _ = model(**inputs)
+            except:
+                outputs = model(**inputs)
         logits = outputs.logits
 
         labels = inputs.get("ground_truth")

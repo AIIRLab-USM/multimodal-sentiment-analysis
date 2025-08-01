@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix
 A short script for creating visual data using model evaluation data
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.01.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -74,7 +74,7 @@ def main():
         plt.ylabel("Ground Truth")
         plt.title(f"{ result_type.capitalize() } Confusion Matrix")
         plt.tight_layout()
-        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix_2.png') )
+        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.png') )
 
 if __name__ == "__main__":
     main()

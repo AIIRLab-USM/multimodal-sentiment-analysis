@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader, TensorDataset
 A short script for evaluating a fine-tuned BERT model
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.01.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -31,7 +31,7 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test']['local_image_path', 'ground_truth', 'labels']
+    test_df = df.loc[df['split'] == 'test'][['caption', 'ground_truth', 'labels']]
     test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
 
     # Prepare tensors
