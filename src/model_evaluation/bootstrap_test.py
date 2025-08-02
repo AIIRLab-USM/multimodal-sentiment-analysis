@@ -52,19 +52,27 @@ def main():
     ]
 
     for name, a, b in comparisons:
-        diffs, lower, upper, p = bootstrap_diff(true, a, b)
+        assert len(a) == len(b)
+
+        diffs, lower, upper, p = bootstrap_diff(true, a, b, num_samples= len(a) )
+
         print(f"\n{name}")
         print(f"  95% CI of accuracy difference: [{lower:.4f}, {upper:.4f}]")
-        print(f"  p-value: {p:.4f} {'(Significant)' if p < 0.05 else '(Not Significant)'}")
+        print(f"  p-value: {p:.12f} {'(Significant)' if p < 0.05 else '(Not Significant)'}")
 
-        # Optional: histogram
+        # Histogram
         plt.figure()
         plt.hist(diffs, bins=50, alpha=0.7)
-        plt.axvline(0, color='red', linestyle='--')
+        plt.axvline(x=0, color='red', linestyle='--', label='no difference')
+        plt.axvline(x=np.mean(diffs), color='blue', linestyle='-', label=f"mean difference")
+
         plt.title(name)
         plt.xlabel("Accuracy Difference (A - B)")
         plt.ylabel("Frequency")
+
         plt.tight_layout()
+        plt.legend()
+
         plt.savefig(
             os.path.join("data", "plot", "bootstrap_testing",
                          f"{name.replace(' ', '_').lower()}.png")
