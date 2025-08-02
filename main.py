@@ -1,5 +1,5 @@
 from src.model_training import bert_trainer, vit_trainer, multimodal_trainer
-from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation
+from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation, bootstrap_test
 from src.data_preprocessing import process_artemis, caption_generation
 from src import data_visualization
 
@@ -55,5 +55,9 @@ if __name__ == '__main__':
     # Evaluate multi-modal model
     multimodal_evaluation.main()
 
+    # Bootstrap testing
+    bootstrap_test.main()
+
     # Generate confusion matrices for each modality
+    # Generate distribution plots
     data_visualization.main()

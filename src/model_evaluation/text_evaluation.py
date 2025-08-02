@@ -74,28 +74,47 @@ def main():
             all_pred_labels.extend(preds.cpu().numpy().tolist())
             all_pred_dists.extend(probs.cpu().numpy().tolist())
 
-    # Compute metrics
-    f1 = f1_score(all_true_labels, all_pred_labels, average='macro')
-    precision = precision_score(all_true_labels, all_pred_labels, average='macro')
-    recall = recall_score(all_true_labels, all_pred_labels, average='macro')
-    acc = accuracy_score(all_true_labels, all_pred_labels)
+    # Class names for labeling the dictionary keys
+    class_names = [
+        'amusement', 'anger', 'awe', 'contentment', 'disgust',
+        'excitement', 'fear', 'sadness', 'something else'
+    ]
 
-    print(f"\nF1 Score (Macro): {f1:.4f}")
-    print(f"Precision (Macro): {precision:.4f}")
-    print(f"Recall (Macro): {recall:.4f}")
-    print(f"Accuracy: {acc:.4f}")
+    # Global (macro-averaged) metrics
+    f1_macro = f1_score(all_true_labels, all_pred_labels, average='macro')
+    precision_macro = precision_score(all_true_labels, all_pred_labels, average='macro')
+    recall_macro = recall_score(all_true_labels, all_pred_labels, average='macro')
+    accuracy = accuracy_score(all_true_labels, all_pred_labels)
 
-    # Save metrics CSV
-    pd.DataFrame({
-        'f1': [f1],
-        'precision': [precision],
-        'recall': [recall],
-        'accuracy': [acc]
-    }).to_csv(os.path.join('data', 'evaluation', 'text_metrics.csv'), index=False)
+    # Per-class metrics
+    f1_per_class = f1_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
+    precision_per_class = precision_score(all_true_labels, all_pred_labels, average=None,
+                                          labels=range(len(class_names)))
+    recall_per_class = recall_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
+
+    # Structure the data into a single dictionary
+    metrics_dict = {
+        'global': {
+            'f1_score': f1_macro,
+            'precision': precision_macro,
+            'recall': recall_macro,
+            'accuracy': accuracy
+        }
+    }
+
+    for i, name in enumerate(class_names):
+        metrics_dict[name] = {
+            'f1_score': f1_per_class[i],
+            'precision': precision_per_class[i],
+            'recall': recall_per_class[i]
+        }
+
+    with open( os.path.join('data', 'evaluation', 'text_metrics.json'), 'w') as f:
+        json.dump(metrics_dict, f, indent=4)
 
     # Prepare rounded + JSON strings for vector columns
-    all_true_dists = [json.dumps( round_list(vec) ) for vec in all_true_dists]
-    all_pred_dists = [json.dumps( round_list(vec) ) for vec in all_pred_dists]
+    all_true_dists = [json.dumps(round_list(vec)) for vec in all_true_dists]
+    all_pred_dists = [json.dumps(round_list(vec)) for vec in all_pred_dists]
 
 
     result_df = pd.DataFrame({
@@ -106,7 +125,8 @@ def main():
         'pred_dist': all_pred_dists
     })
 
-    result_df.to_csv(os.path.join('data', 'evaluation', 'text_results.csv'), index=False)
+    results_path = os.path.join('data', 'evaluation', 'text_results.csv')
+    result_df.to_csv(results_path, index=False)
 
 if __name__ == '__main__':
     main()

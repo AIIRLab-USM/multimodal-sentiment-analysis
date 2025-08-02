@@ -83,34 +83,42 @@ def main():
             all_pred_labels.extend(preds.cpu().numpy().tolist())
             all_pred_dists.extend(probs.cpu().numpy().tolist())
 
-    # Compute metrics
-    f1 = f1_score(all_true_labels, all_pred_labels, average='macro')
-    precision = precision_score(all_true_labels, all_pred_labels, average='macro')
-    recall = recall_score(all_true_labels, all_pred_labels, average='macro')
-    acc = accuracy_score(all_true_labels, all_pred_labels)
+    # Class names for labeling
+    class_names = [
+        'amusement', 'anger', 'awe', 'contentment', 'disgust',
+        'excitement', 'fear', 'sadness', 'something else'
+    ]
 
-    print(f"F1 Score (Macro): {f1:.4f}")
-    print(f"Precision (Macro): {precision:.4f}")
-    print(f"Recall (Macro): {recall:.4f}")
-    print(f"Accuracy: {acc:.4f}")
+    # Calculate global and per-class metrics
+    f1_macro = f1_score(all_true_labels, all_pred_labels, average='macro')
+    precision_macro = precision_score(all_true_labels, all_pred_labels, average='macro')
+    recall_macro = recall_score(all_true_labels, all_pred_labels, average='macro')
+    accuracy = accuracy_score(all_true_labels, all_pred_labels)
 
-    # Save metrics
-    metrics_df = pd.DataFrame({
-        'f1': [f1],
-        'precision': [precision],
-        'recall': [recall],
-        'accuracy': [acc]
-    })
-    metrics_df.to_csv(os.path.join('data', 'evaluation', 'image_metrics.csv'), index=False)
+    f1_per_class = f1_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
+    precision_per_class = precision_score(all_true_labels, all_pred_labels, average=None,
+                                          labels=range(len(class_names)))
+    recall_per_class = recall_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
 
-    all_true_dists = [json.dumps( round_list(vec) ) for vec in all_true_dists]
-    all_pred_dists = [json.dumps( round_list(vec) ) for vec in all_pred_dists]
+    # Structure data into a single dictionary
+    metrics_dict = {
+        'global': {
+            'f1_score': f1_macro,
+            'precision': precision_macro,
+            'recall': recall_macro,
+            'accuracy': accuracy
+        }
+    }
 
-    print(len(list(test_df['local_image_path'])))
-    print(len(all_true_labels))
-    print(len(all_pred_labels))
-    print(len(all_true_dists))
-    print(len(all_pred_dists))
+    for i, name in enumerate(class_names):
+        metrics_dict[name] = {
+            'f1_score': f1_per_class[i],
+            'precision': precision_per_class[i],
+            'recall': recall_per_class[i]
+        }
+
+    with open( os.path.join('data', 'evaluation', 'image_metrics.json'), 'w') as f:
+        json.dump(metrics_dict, f, indent=4)
 
     result_df = pd.DataFrame({
         'image_path': list(test_df['local_image_path']),

@@ -29,29 +29,38 @@ label_map = {
     'something else': 8
 }
 
-def artemis_distribution_chart(label_counts, file_name):
+def artemis_distribution_chart(title, label_counts, file_name):
     plt.figure(figsize=(10, 6))
     plt.bar(label_map.keys(), label_counts)
     plt.xticks(rotation=45)
-    plt.title("Class Distribution")
+    plt.title(title)
     plt.xlabel("Emotion")
     plt.ylabel("Number of Samples")
     plt.tight_layout()
-    plt.savefig(os.path.join('data', 'plot', 'class_distribution.png'))
+    plt.savefig(file_name)
 
 
 def main():
     os.makedirs(f'data{os.path.sep}plot', exist_ok=True)
+    os.makedirs( os.path.join('data', 'plot', 'distribution'), exist_ok=True)
 
     # Total class distribution chart
     df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
     label_counts = df['ground_truth'].value_counts().sort_index()
-    artemis_distribution_chart(label_counts, os.path.join('data', 'plot', 'global_class_distribution.png'))
+    artemis_distribution_chart(
+        "Global Class Distribution",
+        label_counts,
+        os.path.join('data', 'plot', 'distribution', 'global_class_distribution.png')
+    )
 
     for split in ['train', 'eval', 'test']:
         curr_df = df.loc[df['split'] == split]
         label_counts = curr_df['ground_truth'].value_counts().sort_index()
-        artemis_distribution_chart(label_counts, os.path.join('data', 'plot', f'{split}_class_distribution.png'))
+        artemis_distribution_chart(
+            f"{split.capitalize()} Class Distribution",
+            label_counts,
+            os.path.join('data', 'plot', 'distribution', f'{split}_class_distribution.png')
+        )
 
     # Confusion matrices for each modality
     for result_type in result_types:
@@ -75,6 +84,29 @@ def main():
         plt.title(f"{ result_type.capitalize() } Confusion Matrix")
         plt.tight_layout()
         plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.png') )
+
+        # Additional: Attention weight visualization for multimodal model
+        if result_type == "multimodal":
+            if "image_weight" in result_df.columns and "text_weight" in result_df.columns:
+                # Per-emotion average attention weights
+                label_names = list(label_map.keys())
+                result_df["emotion"] = result_df["true_label"].map(lambda x: label_names[x])
+
+                # Compute per-emotion averages
+                avg_weights = result_df.groupby("emotion")[["image_weight", "text_weight"]].mean().reset_index()
+                avg_weights = avg_weights.melt(id_vars="emotion", var_name="Modality", value_name="Attention Weight")
+
+                # Plot
+                plt.figure(figsize=(10, 6))
+                sns.barplot(data=avg_weights, x="emotion", y="Attention Weight", hue="Modality",
+                            palette=["skyblue", "salmon"])
+                plt.title("Average Attention Weights per Emotion")
+                plt.xlabel("Emotion")
+                plt.ylabel("Average Attention Weight")
+                plt.xticks(rotation=45)
+                plt.ylim(0, 1)
+                plt.tight_layout()
+                plt.savefig(os.path.join('data', 'plot', 'class_attentions.png'))
 
 if __name__ == "__main__":
     main()

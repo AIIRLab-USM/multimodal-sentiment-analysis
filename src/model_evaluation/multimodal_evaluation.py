@@ -74,13 +74,9 @@ def main():
     model.to(device)
     model.eval()
 
-    # Run evaluation
-    all_true_labels = []
-    all_true_dists = []
-    all_pred_labels = []
-    all_pred_dists = []
-    all_attn_weights_text = []
-    all_attn_weights_image = []
+    all_true_labels, all_pred_labels = [], []
+    all_true_dists, all_pred_dists = [], []
+    all_attn_weights_text, all_attn_weights_image = [], []
 
     with torch.no_grad():
         for pixel_values, input_ids, attention_mask, true_labels, true_dists in tqdm(test_loader, desc="Evaluating"):
@@ -100,30 +96,48 @@ def main():
             all_pred_labels.extend(preds.cpu().numpy().tolist())
             all_pred_dists.extend(probs.cpu().numpy().tolist())
 
-            attn_weights = attn_weights.cpu().numpy()
-            all_attn_weights_text.extend(attn_weights[:, 0].tolist())
-            all_attn_weights_image.extend(attn_weights[:, 1].tolist())
+            # Collect attention weights
+            attn_weights_np = attn_weights.cpu().numpy()
+            all_attn_weights_text.extend(attn_weights_np[:, 0].tolist())
+            all_attn_weights_image.extend(attn_weights_np[:, 1].tolist())
 
-    # Compute metrics
-    f1 = f1_score(all_true_labels, all_pred_labels, average='macro')
-    precision = precision_score(all_true_labels, all_pred_labels, average='macro')
-    recall = recall_score(all_true_labels, all_pred_labels, average='macro')
-    acc = accuracy_score(all_true_labels, all_pred_labels)
+    # 1. Define class names for labeling
+    class_names = [
+        'amusement', 'anger', 'awe', 'contentment', 'disgust',
+        'excitement', 'fear', 'sadness', 'something else'
+    ]
 
-    print(f"\nF1 Score (Macro): {f1:.4f}")
-    print(f"Precision (Macro): {precision:.4f}")
-    print(f"Recall (Macro): {recall:.4f}")
-    print(f"Accuracy: {acc:.4f}")
+    # Calculate global and per-class metrics
+    f1_macro = f1_score(all_true_labels, all_pred_labels, average='macro')
+    precision_macro = precision_score(all_true_labels, all_pred_labels, average='macro')
+    recall_macro = recall_score(all_true_labels, all_pred_labels, average='macro')
+    accuracy = accuracy_score(all_true_labels, all_pred_labels)
 
-    # Save metrics
-    pd.DataFrame({
-        'f1': [f1],
-        'precision': [precision],
-        'recall': [recall],
-        'accuracy': [acc]
-    }).to_csv(os.path.join('data', 'evaluation', 'multimodal_metrics.csv'), index=False)
+    f1_per_class = f1_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
+    precision_per_class = precision_score(all_true_labels, all_pred_labels, average=None,
+                                          labels=range(len(class_names)))
+    recall_per_class = recall_score(all_true_labels, all_pred_labels, average=None, labels=range(len(class_names)))
 
-    # Save results
+    # Structure data into a single dictionary
+    metrics_dict = {
+        'global': {
+            'f1_score': f1_macro,
+            'precision': precision_macro,
+            'recall': recall_macro,
+            'accuracy': accuracy
+        }
+    }
+
+    for i, name in enumerate(class_names):
+        metrics_dict[name] = {
+            'f1_score': f1_per_class[i],
+            'precision': precision_per_class[i],
+            'recall': recall_per_class[i]
+        }
+
+    with open( os.path.join('data', 'evaluation', 'multimodal_metrics.json'), 'w') as f:
+        json.dump(metrics_dict, f, indent=4)
+
     result_df = pd.DataFrame({
         'local_image_path': list(test_df['local_image_path']),
         'caption': list(test_df['caption']),
