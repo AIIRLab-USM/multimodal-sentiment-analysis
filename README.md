@@ -27,7 +27,7 @@ Our study consists of three parallel pipelines:
 
 1. **Image-only**: A Vision Transformer (ViT) classifies emotion directly from artwork images.
 2. **Caption-only**: We generate affective captions using LLaVA and classify them using a fine-tuned BERT model.
-3. **Multimodal Fusion**: Language and vision embeddings are concatenated and passed through an MLP for classification.
+3. **Multimodal Fusion**: Language and vision embeddings are fused with attention and passed through an MLP for classification.
 
 ---
 
@@ -43,6 +43,8 @@ ambiguity.
 ---
 
 ## Installation
+
+Any user wishing to replicate the experiments done using the code in this repository will need to download the ArtEmis V2.0 dataset. You can request access to this dataset at https://www.artemisdataset-v2.org/
 
 ```
 git clone https://github.io/cdurepos/multimodal-sentiment-analysis.git
