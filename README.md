@@ -69,6 +69,8 @@ It is important to note that caption generation and model training can take espe
 
 ## Directory Structure
 
+The components of the ArtEmis V2.0 dataset should be placed within the ''' original_data ''' directory
+
 ```
 multimodal-sentiment-analysis
 |--- data/
