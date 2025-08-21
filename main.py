@@ -1,6 +1,6 @@
 from src.model_training import bert_trainer, vit_trainer, multimodal_trainer
-from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation, bootstrap_test
-from src.data_preprocessing import process_artemis, caption_generation
+from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation, mcnemar_test
+from src.data_preprocessing import process_artemis, caption_generation, find_dups, remove_dups
 from src import data_visualization
 
 """
@@ -31,8 +31,12 @@ if __name__ == '__main__':
     # Process original data
     process_artemis.main()
 
-    # Generate captions for final dataset
-    # NOTICE: This step takes especially long
+    # Remove duplicates
+    find_dups.main()
+    remove_dups.main()
+
+    # # Generate captions for final dataset
+    # # NOTICE: This step takes especially long
     caption_generation.main()
 
     # Train text-classification model
@@ -56,7 +60,7 @@ if __name__ == '__main__':
     multimodal_evaluation.main()
 
     # Bootstrap testing
-    bootstrap_test.main()
+    mcnemar_test.main()
 
     # Generate confusion matrices for each modality
     # Generate distribution plots

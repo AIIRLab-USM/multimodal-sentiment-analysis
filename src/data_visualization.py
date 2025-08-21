@@ -29,7 +29,7 @@ label_map = {
     'something else': 8
 }
 
-def artemis_distribution_chart(title, label_counts, file_name):
+def artemis_distribution_chart(title, label_counts, file_name, file_type):
     plt.figure(figsize=(10, 6))
     plt.bar(label_map.keys(), label_counts)
     plt.xticks(rotation=45)
@@ -37,7 +37,7 @@ def artemis_distribution_chart(title, label_counts, file_name):
     plt.xlabel("Emotion")
     plt.ylabel("Number of Samples")
     plt.tight_layout()
-    plt.savefig(file_name)
+    plt.savefig(f'{file_name}.{file_type}', format=file_type)
 
 
 def main():
@@ -50,7 +50,8 @@ def main():
     artemis_distribution_chart(
         "Global Class Distribution",
         label_counts,
-        os.path.join('data', 'plot', 'distribution', 'global_class_distribution.png')
+        os.path.join('data', 'plot', 'distribution', 'global_class_distribution'),
+        file_type='pdf'
     )
 
     for split in ['train', 'eval', 'test']:
@@ -59,7 +60,8 @@ def main():
         artemis_distribution_chart(
             f"{split.capitalize()} Class Distribution",
             label_counts,
-            os.path.join('data', 'plot', 'distribution', f'{split}_class_distribution.png')
+            os.path.join('data', 'plot', 'distribution', f'{split}_class_distribution'),
+            file_type='pdf'
         )
 
     # Confusion matrices for each modality
@@ -83,7 +85,7 @@ def main():
         plt.ylabel("Ground Truth")
         plt.title(f"{ result_type.capitalize() } Confusion Matrix")
         plt.tight_layout()
-        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.png') )
+        plt.savefig( os.path.join('data', 'plot', f'{result_type}_matrix.pdf'), format="pdf" )
 
         # Additional: Attention weight visualization for multimodal model
         if result_type == "multimodal":
@@ -100,13 +102,13 @@ def main():
                 plt.figure(figsize=(10, 6))
                 sns.barplot(data=avg_weights, x="emotion", y="Attention Weight", hue="Modality",
                             palette=["skyblue", "salmon"])
-                plt.title("Average Attention Weights per Emotion")
+                # plt.title("Average Attention Weights per Emotion")
                 plt.xlabel("Emotion")
                 plt.ylabel("Average Attention Weight")
                 plt.xticks(rotation=45)
                 plt.ylim(0, 1)
                 plt.tight_layout()
-                plt.savefig(os.path.join('data', 'plot', 'class_attentions.png'))
+                plt.savefig(os.path.join('data', 'plot', 'class_attentions.pdf'), format="pdf")
 
 if __name__ == "__main__":
     main()
