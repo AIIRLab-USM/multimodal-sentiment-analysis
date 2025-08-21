@@ -34,6 +34,8 @@ CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'original_data', 'Contrasti
 
 OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
 
+DUP_CSV = os.path.join('data', 'duplicates.csv')
+
 LABEL_MAP = {
     'amusement': 0,
     'anger': 1,
@@ -112,6 +114,21 @@ def main():
     })).reset_index()
 
     artemis_df = artemis_df.merge(soft_label_df, on=['local_image_path'], how='left')
+
+    # Remove duplicate images
+    dup = pd.read_csv(DUP_CSV)
+    dup_basenames = set(dup['basename'].astype(str).str.strip().str.lower())
+
+    # Compute basename
+    artemis_df["_basename"] = (
+        artemis_df["local_image_path"]
+        .astype(str)
+        .apply(lambda p: os.path.basename(p.strip()))
+        .str.strip()
+        .str.lower()
+    )
+
+    artemis_df = artemis_df.loc[~artemis_df["_basename"].isin(dup_basenames)].drop(columns=["_basename"])
 
     # Label train, eval, test
     train_df, temp_df = train_test_split(artemis_df, test_size=(1-TRAIN_RATIO), random_state=42)
