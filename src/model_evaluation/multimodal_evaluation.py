@@ -64,7 +64,7 @@ def main():
 
     # Load testing data
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test'][['local_image_path', 'caption', 'ground_truth', 'labels']]
+    test_df = df.loc[df['split'] == 'test'][['art_style', 'painting', 'caption', 'ground_truth', 'labels']]
     test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
 
     # Build dataset + loader
@@ -142,7 +142,8 @@ def main():
         json.dump(metrics_dict, f, indent=4)
 
     result_df = pd.DataFrame({
-        'local_image_path': list(test_df['local_image_path']),
+        'art_style': list(test_df['art_style']),
+        'painting': list(test_df['painting']),
         'caption': list(test_df['caption']),
         'true_label': all_true_labels,
         'pred_label': all_pred_labels,

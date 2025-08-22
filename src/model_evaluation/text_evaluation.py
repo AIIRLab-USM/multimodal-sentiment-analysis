@@ -31,7 +31,7 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test'][['caption', 'label', 'probs']]
+    test_df = df.loc[df['split'] == 'test'][['art_style', 'painting', 'caption', 'label', 'probs']]
     test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
 
     # Prepare tensors
@@ -118,6 +118,8 @@ def main():
 
 
     result_df = pd.DataFrame({
+        'art_style': list(test_df['art_style']),
+        'painting': list(test_df['painting']),
         'caption': captions,
         'true_label': all_true_labels,
         'pred_label': all_pred_labels,
