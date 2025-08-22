@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix
 A short script for creating visual data using model evaluation data
 
 Author: Clayton Durepos
-Version: 08.01.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -46,7 +46,7 @@ def main():
 
     # Total class distribution chart
     df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
-    label_counts = df['ground_truth'].value_counts().sort_index()
+    label_counts = df['label'].value_counts().sort_index()
     artemis_distribution_chart(
         "Global Class Distribution",
         label_counts,
@@ -56,7 +56,7 @@ def main():
 
     for split in ['train', 'eval', 'test']:
         curr_df = df.loc[df['split'] == split]
-        label_counts = curr_df['ground_truth'].value_counts().sort_index()
+        label_counts = curr_df['label'].value_counts().sort_index()
         artemis_distribution_chart(
             f"{split.capitalize()} Class Distribution",
             label_counts,

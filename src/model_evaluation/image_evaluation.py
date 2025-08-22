@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A short script for evaluating a fine-tuned ViT model
 
 Author: Clayton Durepos
-Version: 08.01.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -45,8 +45,8 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
         return (
             inputs['pixel_values'].squeeze(0),  # pixel_values
-            row['ground_truth'],                # true_labels
-            torch.tensor(row['labels'])         # true_dists
+            row['label'],                       # true_labels
+            torch.tensor(row['probs'])          # true_dists
         )
 
 def main():
@@ -54,8 +54,8 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test'][['local_image_path', 'ground_truth', 'labels']]
-    test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
+    test_df = df.loc[df['split'] == 'test'][['local_image_path', 'label', 'probs']]
+    test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
 
     # Build dataset + loader
     test_data = ImageProcessingDataset(test_df)

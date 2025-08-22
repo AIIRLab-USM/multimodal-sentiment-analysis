@@ -1,18 +1,16 @@
 import os
 import ast
-import numpy as np
 import pandas as pd
 from datasets import Dataset
 from src.classification_models import *
 from transformers import AutoTokenizer
-from sklearn.utils.class_weight import compute_class_weight
 from src.model_training.training import compute_metrics, get_args, early_stopping_callback, KLTrainer
 
 """
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -25,12 +23,12 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['caption', 'labels', 'ground_truth']]
-    train_data['labels'] = train_data['labels'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
-    train_data = Dataset.from_pandas( train_data[['caption', 'labels']], preserve_index=False)
+    train_data = df.loc[df['split'] == 'train'][['caption', 'label', 'probs']]
+    train_data['probs'] = train_data['probs'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
+    train_data = Dataset.from_pandas( train_data[['caption', 'label']], preserve_index=False)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['caption', 'labels', 'ground_truth']].copy()
+    eval_data = df.loc[df['split'] == 'eval'][['caption', 'label', 'probs']].copy()
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
 
     # Tokenize captions

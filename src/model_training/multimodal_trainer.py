@@ -1,19 +1,17 @@
 import os
 import ast
 import torch
-import numpy as np
 import pandas as pd
 from PIL import Image
 from src.classification_models import MultimodalClassifier
 from transformers import AutoImageProcessor, AutoTokenizer
-from sklearn.utils.class_weight import compute_class_weight
 from src.model_training.training import get_args, compute_metrics, early_stopping_callback, KLTrainer
 
 """
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -46,7 +44,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': row['labels']
+            'labels': row['probs']
         }
 
         if 'ground_truth' in self.df.columns:
@@ -61,13 +59,13 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'labels', 'ground_truth']].copy()
-    train_data['labels'] = train_data['labels'].apply( lambda x: ast.literal_eval(x) )
-    train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'labels']] )
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'label', 'probs']].copy()
+    train_data['probs'] = train_data['probs'].apply( lambda x: ast.literal_eval(x) )
+    train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'probs']] )
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'labels', 'ground_truth']].copy()
-    eval_data['labels'] = eval_data['labels'].apply( lambda x: ast.literal_eval(x) )
+    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'label', 'probs']].copy()
+    eval_data['probs'] = eval_data['probs'].apply( lambda x: ast.literal_eval(x) )
     eval_data = MMProcessingDataset( eval_data )
 
     # Delete original DataFrame to free memory

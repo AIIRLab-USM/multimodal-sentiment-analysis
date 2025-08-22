@@ -3,8 +3,6 @@ import unicodedata
 import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
-
-from collections import Counter
 import numpy as np
 
 """
@@ -23,7 +21,7 @@ This Python script processes the ArtEmis dataset by:
     3. Save generated dataset to a new CSV file
     
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -32,7 +30,7 @@ Contact: clayton.durepos@maine.edu
 ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'original_data', 'artemis_dataset_release_v0.csv')
 CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'original_data', 'Contrastive.csv')
 
-OUTPUT_FILE = os.path.join('data', 'datasets', 'custom_artemis.csv')
+OUTPUT_FILE = os.path.join('data', 'datasets', 'artemis_temp.csv')
 
 DUP_CSV = os.path.join('data', 'duplicates.csv')
 
@@ -53,8 +51,6 @@ EVAL_RATIO = 0.1
 TEST_RATIO = 0.1
 
 tqdm.pandas()
-
-# ... previous imports and constants remain the same ...
 
 def main():
     """
@@ -91,78 +87,68 @@ def main():
     # Scrap 'utterance'
     artemis_df = artemis_df[["art_style", "painting", "emotion"]].copy()
 
-    # Generate image paths for temporary use
-    artemis_df['local_image_path']  = artemis_df.progress_apply(
-        lambda row: unicodedata.normalize('NFC',
-                        os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg")
-                    ), axis=1
-    )
-
     # Map emotion labels to index
-    artemis_df['ground_truth'] = artemis_df['emotion'].map(LABEL_MAP)
+    artemis_df['label'] = artemis_df['emotion'].map(LABEL_MAP)
 
-    grouped = artemis_df.groupby(['local_image_path'])
+    grouped = artemis_df.groupby(['painting'])
     def compute_soft_label_vec(group):
         counts = np.zeros(len(LABEL_MAP), dtype=np.float32)
-        for idx in group['ground_truth']:
+        for idx in group['label']:
             counts[idx] += 1
         return counts / counts.sum()
 
-
     soft_label_df = grouped.apply(lambda g: pd.Series({
-        'labels': compute_soft_label_vec(g).tolist()
+        'probs': compute_soft_label_vec(g).tolist()
     })).reset_index()
 
-    artemis_df = artemis_df.merge(soft_label_df, on=['local_image_path'], how='left')
+    artemis_df = artemis_df.merge(soft_label_df, on=['painting'], how='left')
 
-    # Remove duplicate images
-    dup = pd.read_csv(DUP_CSV)
-    dup_basenames = set(dup['basename'].astype(str).str.strip().str.lower())
-
-    # Compute basename
-    artemis_df["_basename"] = (
-        artemis_df["local_image_path"]
-        .astype(str)
-        .apply(lambda p: os.path.basename(p.strip()))
-        .str.strip()
-        .str.lower()
+    # Generate image paths for temporary use
+    artemis_df['local_image_path'] = artemis_df.progress_apply(
+            lambda row: unicodedata.normalize('NFC',
+            os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg")
+        ), axis=1
     )
 
-    artemis_df = artemis_df.loc[~artemis_df["_basename"].isin(dup_basenames)].drop(columns=["_basename"])
-
     # Label train, eval, test
-    train_df, temp_df = train_test_split(artemis_df, test_size=(1-TRAIN_RATIO), random_state=42)
-    eval_df, test_df = train_test_split(temp_df, test_size=(TEST_RATIO / (EVAL_RATIO + TEST_RATIO)), random_state=42)
+    train_df, temp_df = train_test_split(
+        artemis_df,
+        test_size=(1-TRAIN_RATIO),
+        random_state=42,
+        stratify=artemis_df["label"]
+    )
+
+    eval_df, test_df = train_test_split(
+        temp_df,
+        test_size=(TEST_RATIO / (EVAL_RATIO + TEST_RATIO)),
+        random_state=42,
+        stratify=temp_df["label"]
+    )
 
     train_df["split"] = "train"
     eval_df["split"] = "eval"
     test_df["split"] = "test"
 
-    full_df = pd.concat([train_df, eval_df, test_df])
+    artemis_df = pd.concat([train_df, eval_df, test_df])
 
-    # Compute dominant labels and filter eval/test samples
-    group_stats = (
-        full_df.groupby(['local_image_path'])['ground_truth']
-        .agg(lambda x: (x.value_counts().idxmax(), x.value_counts().max() / len(x)))
-        .apply(pd.Series)
-    )
-    group_stats.columns = ['dominant_label', 'confidence']
-    group_stats = group_stats[group_stats['confidence'] > 0.5]
-    group_stats.reset_index(inplace=True)
-
-    # Merge to get confident eval/test samples
-    full_df = full_df.merge(group_stats, on='local_image_path', how='left')
+    # Reserve only confident labels in test and evaluation
+    artemis_df["dominant_label"] = artemis_df["probs"].apply(lambda p: int(np.argmax(p)))
+    artemis_df["confidence"] = artemis_df["probs"].apply(lambda p: float(np.max(p)))
 
     # Keep all train samples + confident eval/test
-    filtered_df = full_df[
-        (full_df['split'] == 'train') |
-        ((full_df['split'] != 'train') & (full_df['ground_truth'] == full_df['dominant_label']))
+    artemis_df = artemis_df[
+        (artemis_df["split"] == "train") |
+        (
+                (artemis_df["split"] != "train")
+                & (artemis_df["label"] == artemis_df["dominant_label"])
+                & (artemis_df["confidence"] > 0.5)
+        )
     ]
 
-    final_df = filtered_df[["local_image_path", "split", "labels", "ground_truth"]]
+    artemis_df = artemis_df[["local_image_path", "split", "label", "probs"]]
 
     try:
-        final_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
+        artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)
     except Exception as e:
         print(f"Error saving {OUTPUT_FILE} : {e}")
 

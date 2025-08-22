@@ -14,7 +14,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A short script for evaluating a fine-tuned ViT & BERT multimodal model
 
 Author: Clayton Durepos
-Version: 08.01.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -52,8 +52,8 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             img_inputs['pixel_values'].squeeze(0),                      # pixeL_values
             txt_inputs['input_ids'].squeeze(0),                         # input_ids
             txt_inputs['attention_mask'].squeeze(0),                    # attention_mask
-            row['ground_truth'],                                        # true_labels
-            torch.tensor(row['labels']),                                # true_dists
+            row['label'],                                               # true_labels
+            torch.tensor(row['probs']),                                 # true_dists
         )
 
 def main():
@@ -62,7 +62,7 @@ def main():
     # Load testing data
     df = pd.read_csv(data_path)
     test_df = df.loc[df['split'] == 'test'][['local_image_path', 'caption', 'ground_truth', 'labels']]
-    test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
+    test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
 
     # Build dataset + loader
     test_data = MMProcessingDataset(test_df)

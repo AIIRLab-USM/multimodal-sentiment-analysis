@@ -1,6 +1,6 @@
 from src.model_training import bert_trainer, vit_trainer, multimodal_trainer
-from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation, mcnemar_test
-from src.data_preprocessing import process_artemis, caption_generation, find_dups
+from src.model_evaluation import text_evaluation, image_evaluation, multimodal_evaluation, mcnemar_test, style_analysis
+from src.data_preprocessing import process_artemis, caption_generation
 from src import data_visualization
 
 """
@@ -28,9 +28,6 @@ Contact: clayton.durepos@maine.edu
 """
 
 if __name__ == '__main__':
-    # Find duplicates
-    find_dups.main()
-
     # Process original data
     process_artemis.main()
 
@@ -64,3 +61,6 @@ if __name__ == '__main__':
     # Generate confusion matrices for each modality
     # Generate distribution plots
     data_visualization.main()
+
+    # Per-style analysis for multimodal model
+    style_analysis.main()

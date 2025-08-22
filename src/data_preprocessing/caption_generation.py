@@ -7,7 +7,6 @@ from pathlib import Path
 from transformers import BitsAndBytesConfig
 from transformers import pipeline
 
-
 # Local variable set to allow larger batch sizes on the local device
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
@@ -100,14 +99,14 @@ class CaptionGenerator:
 
 def main():
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = os.path.join('data', 'datasets', 'custom_artemis.csv')
-    out_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+    in_path = os.path.join('data', 'datasets', 'artemis_temp.csv')
+    out_path = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")
     cap_gen.setup()
     cap_gen.from_csv(in_path,
                      out_path,
-                     prompt="USER: <image>\nCaption this painting\nASSISTANT:",
+                     prompt="USER: <image>\nCaption this image\nASSISTANT:",
                      batch_size=16) # Adjust to GPU (VRAM) capacity
 
 if __name__ == "__main__":

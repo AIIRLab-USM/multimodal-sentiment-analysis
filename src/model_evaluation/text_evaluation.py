@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader, TensorDataset
 A short script for evaluating a fine-tuned BERT model
 
 Author: Clayton Durepos
-Version: 08.01.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -31,13 +31,13 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test'][['caption', 'ground_truth', 'labels']]
-    test_df['labels'] = test_df['labels'].apply( ast.literal_eval )
+    test_df = df.loc[df['split'] == 'test'][['caption', 'label', 'probs']]
+    test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
 
     # Prepare tensors
     captions = list(test_df['caption'])
     ground_truth_tensor = torch.tensor(test_df['ground_truth'].values, dtype=torch.long)
-    prob_tensor = torch.stack([torch.tensor(x, dtype=torch.float32) for x in test_df['labels'].tolist()])
+    prob_tensor = torch.stack([torch.tensor(x, dtype=torch.float32) for x in test_df['probs'].tolist()])
 
     # Tokenize
     tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')

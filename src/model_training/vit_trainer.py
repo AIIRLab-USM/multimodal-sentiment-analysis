@@ -10,7 +10,7 @@ from src.model_training.training import get_args, compute_metrics, early_stoppin
 A short script for fine-tuning the ViT model for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 07.17.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -35,11 +35,11 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
         inputs = {
             'pixel_values': inputs['pixel_values'].squeeze(0),
-            'labels': row['labels']
+            'labels': row['probs']
         }
 
-        if 'ground_truth' in self.df.columns:
-            inputs['ground_truth'] = row['ground_truth']
+        if 'label' in self.df.columns:
+            inputs['label'] = row['label']
 
         return inputs
 
@@ -49,13 +49,13 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'labels', 'ground_truth']]
-    train_data['labels'] = train_data['labels'].apply(lambda x: ast.literal_eval(x))  # String to array
-    train_data = ImageProcessingDataset( train_data[['local_image_path', 'labels']] )
+    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'label', 'probs']]
+    train_data['probs'] = train_data['probs'].apply(lambda x: ast.literal_eval(x))  # String to array
+    train_data = ImageProcessingDataset( train_data[['local_image_path', 'probs']] )
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'labels', 'ground_truth']].copy()
-    eval_data['labels'] = eval_data['labels'].apply( lambda x: ast.literal_eval(x) )
+    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'label', 'probs']].copy()
+    eval_data['probs'] = eval_data['probs'].apply( lambda x: ast.literal_eval(x) )
     eval_data = ImageProcessingDataset( eval_data )
 
     # Delete original DataFrame to free memory

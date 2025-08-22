@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A small file for shared arguments across model training scripts
 
 Author: Clayton Durepos
-Version: 08.01.2025
+Version: 08.21.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -49,7 +49,7 @@ class KLTrainer(Trainer):
                 outputs = model(**inputs)
         logits = outputs.logits
 
-        labels = inputs.get("ground_truth")
+        labels = inputs.get("label")
         return None, logits, labels
 
 
