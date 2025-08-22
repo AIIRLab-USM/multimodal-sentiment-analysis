@@ -2,6 +2,7 @@ import os
 import ast
 import pandas as pd
 from PIL import Image
+import unicodedata
 from src.classification_models import *
 from transformers import AutoImageProcessor
 from src.model_training.training import get_args, compute_metrics, early_stopping_callback, KLTrainer
@@ -30,7 +31,9 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
-        with Image.open(row['local_image_path']) as img:
+        with Image.open(
+                os.path.join('wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+        ) as img:
             inputs = processor(images=img, return_tensors='pt')
 
         inputs = {

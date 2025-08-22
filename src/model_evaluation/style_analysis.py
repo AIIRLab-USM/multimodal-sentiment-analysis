@@ -4,14 +4,11 @@ def main():
     # Load results
     df = pd.read_csv("../../data/evaluation/multimodal_results.csv")
 
-    # Extract genre from path: "wikiart/{genre}/{image_name}.jpg"
-    df["genre"] = df["local_image_path"].apply(lambda x: x.split("/")[1] if isinstance(x, str) else None)
-
     # Check total samples
     total = len(df)
 
     results = []
-    for genre, gdf in df.groupby("genre"):
+    for genre, gdf in df.groupby("art_style"):
         count = len(gdf)
         # % of total dataset
         percentage = (count / total) * 100

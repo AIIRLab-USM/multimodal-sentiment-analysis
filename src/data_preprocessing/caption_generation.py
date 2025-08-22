@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 import os
+import unicodedata
 from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
@@ -72,34 +73,41 @@ class CaptionGenerator:
         """
         df = pd.read_csv(in_path)
 
-        if "local_image_path" not in df.columns:
-            raise ValueError("CSV file must have 'local_image_path' column")
-
         if os.path.exists(out_path):
             new_df = pd.read_csv(out_path)
         else:
             new_df = df.copy()
             new_df["caption"] = ""
 
-        img_paths = new_df.loc[
-            new_df["caption"].isna() | (new_df["caption"] == ""), "local_image_path"].unique().tolist()
+        images = new_df.loc[
+            new_df["caption"].isna() | (new_df["caption"] == ""),
+            ["art_style", "painting"]
+        ].drop_duplicates(subset=["painting"])[['art_style', 'painting']]
 
-        for i in tqdm(range(0, len(img_paths), batch_size), desc="Generating captions"):
-            batch_paths = img_paths[i:i + batch_size]
-            captions = self(
-                data=batch_paths,
-                prompt=prompt
-            )
+        images["local_image_path"] = images.apply(
+            lambda row: os.path.join('wikiart',
+                            row["art_style"],
+                            f'{unicodedata.normalize("NFC", row["painting"])}.jpg'
+                        ),
+            axis=1
+        )
 
-            for path, caption in zip(batch_paths, captions):
-                new_df.loc[new_df["local_image_path"] == path, "caption"] = caption
+        for i in tqdm(range(0, len( images['local_image_path'] ), batch_size), desc="Generating captions"):
+            batch = images.iloc[i:i + batch_size]
+            captions = self(data=batch["local_image_path"].tolist(), prompt=prompt)
+
+            for (_, row), caption in zip(batch.iterrows(), captions):
+                new_df.loc[
+                    new_df["painting"] == row["painting"],
+                    "caption"
+                ] = caption
 
             new_df.to_csv(out_path, index=False)
 
 
 def main():
     # Generate captions for 80K WikiArt paintings in the ArtEmis dataset
-    in_path = os.path.join('data', 'datasets', 'artemis_temp.csv')
+    in_path = os.path.join('data', 'datasets', 'artemis-temp.csv')
     out_path = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 
     cap_gen = CaptionGenerator("llava-hf/llava-1.5-7b-hf")

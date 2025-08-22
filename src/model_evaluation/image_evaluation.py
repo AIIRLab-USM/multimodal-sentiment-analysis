@@ -2,6 +2,7 @@ import os
 import ast
 import json
 import torch
+import unicodedata
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
@@ -40,7 +41,9 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         row = self.df.iloc[index]
 
-        with Image.open(row['local_image_path']) as img:
+        with Image.open(
+                os.path.join('wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+        ) as img:
             inputs = processor(images=img, return_tensors='pt')
 
         return (

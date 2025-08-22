@@ -30,7 +30,7 @@ Contact: clayton.durepos@maine.edu
 ARTEMIS_PATH = os.path.join( 'data', 'datasets', 'original_data', 'artemis_dataset_release_v0.csv')
 CONTRASTIVE_PATH = os.path.join( 'data', 'datasets', 'original_data', 'Contrastive.csv')
 
-OUTPUT_FILE = os.path.join('data', 'datasets', 'artemis_temp.csv')
+OUTPUT_FILE = os.path.join('data', 'datasets', 'artemis-temp.csv')
 
 DUP_CSV = os.path.join('data', 'duplicates.csv')
 
@@ -103,13 +103,6 @@ def main():
 
     artemis_df = artemis_df.merge(soft_label_df, on=['painting'], how='left')
 
-    # Generate image paths for temporary use
-    artemis_df['local_image_path'] = artemis_df.progress_apply(
-            lambda row: unicodedata.normalize('NFC',
-            os.path.join("wikiart", row["art_style"], row["painting"] + ".jpg")
-        ), axis=1
-    )
-
     # Label train, eval, test
     train_df, temp_df = train_test_split(
         artemis_df,
@@ -145,7 +138,7 @@ def main():
         )
     ]
 
-    artemis_df = artemis_df[["local_image_path", "split", "label", "probs"]]
+    artemis_df = artemis_df[["art_style", "painting", "label", "probs", "split"]]
 
     try:
         artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)

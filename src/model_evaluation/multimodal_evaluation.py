@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
+import unicodedata
 from torch.utils.data import DataLoader
 from transformers import AutoProcessor, AutoTokenizer
 from src.classification_models import MultimodalClassifier
@@ -39,7 +40,9 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
-        with Image.open(row['local_image_path']) as img:
+        with Image.open(
+                os.path.join('wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+        ) as img:
             img_inputs = processor(images=img, return_tensors='pt')
             txt_inputs = tokenizer(text=row['caption'],
                                    padding='max_length',

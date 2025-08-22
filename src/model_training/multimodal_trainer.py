@@ -1,6 +1,7 @@
 import os
 import ast
 import torch
+import unicodedata
 import pandas as pd
 from PIL import Image
 from src.classification_models import MultimodalClassifier
@@ -31,7 +32,9 @@ class MMProcessingDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
-        with Image.open(row['local_image_path']) as img:
+        with Image.open(
+                os.path.join( 'wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+        ) as img:
             img_inputs = processor(images=img, return_tensors='pt')
             txt_inputs = tokenizer(text=row['caption'],
                                    padding='max_length',
@@ -59,12 +62,12 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['local_image_path', 'caption', 'label', 'probs']].copy()
+    train_data = df.loc[df['split'] == 'train'][['art_style', 'painting', 'caption', 'label', 'probs']].copy()
     train_data['probs'] = train_data['probs'].apply( lambda x: ast.literal_eval(x) )
     train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'probs']] )
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['local_image_path', 'caption', 'label', 'probs']].copy()
+    eval_data = df.loc[df['split'] == 'eval'][['art_style', 'painting', 'caption', 'label', 'probs']].copy()
     eval_data['probs'] = eval_data['probs'].apply( lambda x: ast.literal_eval(x) )
     eval_data = MMProcessingDataset( eval_data )
 
