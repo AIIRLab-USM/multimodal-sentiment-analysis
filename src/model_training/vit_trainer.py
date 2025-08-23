@@ -38,7 +38,7 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
 
         inputs = {
             'pixel_values': inputs['pixel_values'].squeeze(0),
-            'labels': row['probs']
+            'probs': row['probs']
         }
 
         if 'label' in self.df.columns:

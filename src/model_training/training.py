@@ -9,7 +9,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A small file for shared arguments across model training scripts
 
 Author: Clayton Durepos
-Version: 08.21.2025
+Version: 08.22.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -19,7 +19,12 @@ class KLTrainer(Trainer):
         super().__init__(*args, **kwargs)
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-        labels = inputs.pop("labels")
+        try:
+            probs = inputs.pop("probs")
+        except KeyError as e:
+            print(f'Labels not found - {e}')
+            return
+
         try:
             outputs, attn_weights = model(**inputs, return_weights=True)
         except:
@@ -27,7 +32,7 @@ class KLTrainer(Trainer):
             attn_weights = None
 
         logits = outputs.logits
-        loss = F.kl_div( input= F.log_softmax(logits, dim=1), target=labels.float(), reduction='mean' )
+        loss = F.kl_div( input= F.log_softmax(logits, dim=1), target=probs.float(), reduction='mean' )
 
         # Log attention weights only if they exist
         if attn_weights is not None and \
@@ -49,7 +54,15 @@ class KLTrainer(Trainer):
                 outputs = model(**inputs)
         logits = outputs.logits
 
-        labels = inputs.get("label")
+        try:
+            labels = inputs.get("labels")
+        except KeyError:
+            try:
+                labels = inputs.get("label")
+            except KeyError as e:
+                print(f'Hard labels not found - {e}')
+                return
+
         return None, logits, labels
 
 
@@ -97,8 +110,9 @@ def get_args(learning_rate:float):
 
             fp16=True,                          # Speed-up training
 
-            per_device_train_batch_size=16,     # Maximum sized allowed by local compute resources
-            per_device_eval_batch_size=32,      # (2x NVIDIA GeForce RTX 2080 Ti)
+            per_device_train_batch_size=32,     # Maximum sized allowed by local compute resources
+            per_device_eval_batch_size=64,      # (2x NVIDIA GeForce RTX 2080 Ti)
+            gradient_accumulation_steps=2,
 
             # Logging
             logging_dir=os.path.join( 'src', 'model_training', 'logs'),

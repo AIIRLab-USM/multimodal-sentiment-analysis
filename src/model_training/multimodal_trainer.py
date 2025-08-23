@@ -47,11 +47,11 @@ class MMProcessingDataset(torch.utils.data.Dataset):
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'labels': row['probs']
+            'probs': row['probs']
         }
 
-        if 'ground_truth' in self.df.columns:
-            inputs['ground_truth'] = row['ground_truth']
+        if 'label' in self.df.columns:
+            inputs['label'] = row['label']
 
         return inputs
 

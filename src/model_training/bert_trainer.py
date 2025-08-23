@@ -15,12 +15,13 @@ Contact: clayton.durepos@maine.edu
 """
 
 MODEL_NM = 'google-bert/bert-base-cased'
-DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 
 def main():
     os.makedirs('models', exist_ok=True)
 
     df = pd.read_csv(DATA_PATH)
+    df = df.loc[~df['caption'].isna()]
 
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'probs']]
