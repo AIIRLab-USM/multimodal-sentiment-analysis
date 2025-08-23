@@ -12,11 +12,11 @@ from src.model_training.training import get_args, compute_metrics, early_stoppin
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 08.21.2025
+Version: 08.22.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')
@@ -33,7 +33,7 @@ class MMProcessingDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         row = self.df.iloc[index]
         with Image.open(
-                os.path.join( 'wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+                os.path.join( 'wikiart', row['art_style'], f'{unicodedata.normalize("NFC", row["painting"])}.jpg')
         ) as img:
             img_inputs = processor(images=img, return_tensors='pt')
             txt_inputs = tokenizer(text=row['caption'],
@@ -62,9 +62,9 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Train Data pre-processing
-    train_data = df.loc[df['split'] == 'train'][['art_style', 'painting', 'caption', 'label', 'probs']].copy()
+    train_data = df.loc[df['split'] == 'train'][['art_style', 'painting', 'caption', 'probs']].copy()
     train_data['probs'] = train_data['probs'].apply( lambda x: ast.literal_eval(x) )
-    train_data = MMProcessingDataset( train_data[['local_image_path', 'caption', 'probs']] )
+    train_data = MMProcessingDataset( train_data )
 
     # Evaluation Data pre-processing
     eval_data = df.loc[df['split'] == 'eval'][['art_style', 'painting', 'caption', 'label', 'probs']].copy()

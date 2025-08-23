@@ -15,7 +15,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 A short script for evaluating a fine-tuned ViT model
 
 Author: Clayton Durepos
-Version: 08.21.2025
+Version: 08.22.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -42,7 +42,7 @@ class ImageProcessingDataset(torch.utils.data.Dataset):
         row = self.df.iloc[index]
 
         with Image.open(
-                os.path.join('wikiart', row['art_style'], unicodedata.normalize("NFC", row['painting']), '.jpg')
+                os.path.join('wikiart', row['art_style'], f'{unicodedata.normalize("NFC", row["painting"])}.jpg')
         ) as img:
             inputs = processor(images=img, return_tensors='pt')
 

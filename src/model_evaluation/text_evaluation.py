@@ -1,6 +1,8 @@
 import os
 import ast
 import json
+from cProfile import label
+
 import torch
 import pandas as pd
 from tqdm import tqdm
@@ -13,7 +15,7 @@ from torch.utils.data import DataLoader, TensorDataset
 A short script for evaluating a fine-tuned BERT model
 
 Author: Clayton Durepos
-Version: 08.21.2025
+Version: 08.22.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -36,7 +38,7 @@ def main():
 
     # Prepare tensors
     captions = list(test_df['caption'])
-    ground_truth_tensor = torch.tensor(test_df['ground_truth'].values, dtype=torch.long)
+    label_tensor = torch.tensor(test_df['label'].values, dtype=torch.long)
     prob_tensor = torch.stack([torch.tensor(x, dtype=torch.float32) for x in test_df['probs'].tolist()])
 
     # Tokenize
@@ -49,7 +51,7 @@ def main():
         return_tensors="pt"
     )
 
-    test_dataset = TensorDataset(tokens['input_ids'], tokens['attention_mask'], ground_truth_tensor, prob_tensor)
+    test_dataset = TensorDataset(tokens['input_ids'], tokens['attention_mask'], label_tensor, prob_tensor)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
     model = TextClassifier(base_model='google-bert/bert-base-cased', num_classes=9)
