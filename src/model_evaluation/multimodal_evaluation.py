@@ -24,7 +24,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 processor = AutoProcessor.from_pretrained('google/vit-base-patch16-224')
 tokenizer = AutoTokenizer.from_pretrained('google-bert/bert-base-cased')
 
-data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+data_path = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 dict_path = f'models{os.path.sep}multimodal-dict.pt'
 
 def round_list(lst):

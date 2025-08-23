@@ -15,7 +15,7 @@ Version: 08.22.2025
 Contact: clayton.durepos@maine.edu
 """
 
-DATA_PATH = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+DATA_PATH = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 MODEL_NAME = 'google/vit-base-patch16-224'
 
 processor = AutoImageProcessor.from_pretrained(MODEL_NAME)

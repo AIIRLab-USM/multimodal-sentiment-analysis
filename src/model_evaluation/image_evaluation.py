@@ -22,7 +22,7 @@ Contact: clayton.durepos@maine.edu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 state_dict_path = f'models{os.path.sep}vit-dict.pt'
-data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+data_path = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 
 # Load processor
 processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224')

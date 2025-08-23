@@ -1,8 +1,6 @@
 import os
 import ast
 import json
-from cProfile import label
-
 import torch
 import pandas as pd
 from tqdm import tqdm
@@ -21,7 +19,7 @@ Contact: clayton.durepos@maine.edu
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-data_path = os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv')
+data_path = os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv')
 dict_path = f'models{os.path.sep}bert-dict.pt'
 
 def round_list(lst):
