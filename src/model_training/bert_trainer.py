@@ -21,7 +21,6 @@ def main():
     os.makedirs('models', exist_ok=True)
 
     df = pd.read_csv(DATA_PATH)
-    df = df.loc[~df['caption'].isna()]
 
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'probs']]
@@ -30,6 +29,7 @@ def main():
 
     # Evaluation Data pre-processing
     eval_data = df.loc[df['split'] == 'eval'][['caption', 'label', 'probs']].copy()
+    eval_data['probs'] = eval_data['probs'].apply(lambda x: ast.literal_eval(x))
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
 
     # Tokenize captions
