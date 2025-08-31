@@ -45,7 +45,7 @@ def main():
     os.makedirs( os.path.join('data', 'plot', 'distribution'), exist_ok=True)
 
     # Total class distribution chart
-    df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal_sentiment_dataset.csv') )
+    df = pd.read_csv( os.path.join('data', 'datasets', 'multimodal-sentiment-dataset.csv') )
     label_counts = df['label'].value_counts().sort_index()
     artemis_distribution_chart(
         "Global Class Distribution",

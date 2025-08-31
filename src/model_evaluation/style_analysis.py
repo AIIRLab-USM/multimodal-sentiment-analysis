@@ -2,7 +2,7 @@ import pandas as pd
 
 def main():
     # Load results
-    df = pd.read_csv("../../data/evaluation/multimodal_results.csv")
+    df = pd.read_csv("./data/evaluation/multimodal_results.csv")
 
     # Check total samples
     total = len(df)
