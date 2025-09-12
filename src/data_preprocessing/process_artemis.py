@@ -21,7 +21,7 @@ This Python script processes the ArtEmis dataset by:
     3. Save generated dataset to a new CSV file
     
 Author: Clayton Durepos
-Version: 08.21.2025
+Version: 09.12.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -83,6 +83,11 @@ def main():
 
     # Concat data for ArtEmis V2.0 DataFrame
     artemis_df = pd.concat([artemis_df, contrastive_df])
+
+    # There exist unicode mismatches between ArtEmis V1.0 and V2.0 - get rid of these to ensure consistent IDs
+    artemis_df['painting'] = artemis_df['painting'].apply(
+        lambda x: unicodedata.normalize('NFKD', x).encode('ascii', 'ignore').decode('utf-8')
+    )
 
     # Scrap 'utterance'
     artemis_df = artemis_df[["art_style", "painting", "emotion"]].copy()
