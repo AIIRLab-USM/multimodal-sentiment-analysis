@@ -2,6 +2,7 @@ import os
 import ast
 import json
 import torch
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -13,7 +14,7 @@ from torch.utils.data import DataLoader, TensorDataset
 A short script for evaluating a fine-tuned BERT model
 
 Author: Clayton Durepos
-Version: 08.22.2025
+Version: 09.12.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -31,8 +32,9 @@ def main():
 
     # Load dataset
     df = pd.read_csv(data_path)
-    test_df = df.loc[df['split'] == 'test'][['art_style', 'painting', 'caption', 'label', 'probs']]
+    test_df = df.loc[df['split'] == 'test'][['art_style', 'painting', 'caption', 'probs']]
     test_df['probs'] = test_df['probs'].apply( ast.literal_eval )
+    test_df['label'] = test_df['probs'].apply( np.argmax )
 
     # Prepare tensors
     captions = list(test_df['caption'])

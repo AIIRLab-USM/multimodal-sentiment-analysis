@@ -143,7 +143,7 @@ def main():
         )
     ]
 
-    artemis_df = artemis_df[["art_style", "painting", "label", "probs", "split"]]
+    artemis_df = artemis_df[["art_style", "painting", "probs", "split"]]
 
     try:
         artemis_df.to_csv(OUTPUT_FILE, encoding='utf-8', index=False)

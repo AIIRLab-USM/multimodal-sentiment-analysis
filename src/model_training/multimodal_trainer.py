@@ -2,6 +2,7 @@ import os
 import ast
 import torch
 import unicodedata
+import numpy as np
 import pandas as pd
 from PIL import Image
 from src.classification_models import MultimodalClassifier
@@ -12,7 +13,7 @@ from src.model_training.training import get_args, compute_metrics, early_stoppin
 A short script for fine-tuning a multimodal classification model on a sentiment classification task
 
 Author: Clayton Durepos
-Version: 08.22.2025
+Version: 09.12.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -43,17 +44,13 @@ class MMProcessingDataset(torch.utils.data.Dataset):
                                    add_special_tokens=True,
                                    return_tensors="pt")
 
-        inputs = {
+        return {
             'pixel_values': img_inputs['pixel_values'].squeeze(0),
             'input_ids': txt_inputs['input_ids'].squeeze(0),
             'attention_mask': txt_inputs['attention_mask'].squeeze(0),
-            'probs': row['probs']
+            'probs': row['probs'],
+            'label': np.argmax(row['probs'])
         }
-
-        if 'label' in self.df.columns:
-            inputs['label'] = row['label']
-
-        return inputs
 
 
 def main():
@@ -63,12 +60,12 @@ def main():
 
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['art_style', 'painting', 'caption', 'probs']].copy()
-    train_data['probs'] = train_data['probs'].apply( lambda x: ast.literal_eval(x) )
+    train_data['probs'] = train_data['probs'].apply( ast.literal_eval )
     train_data = MMProcessingDataset( train_data )
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['art_style', 'painting', 'caption', 'label', 'probs']].copy()
-    eval_data['probs'] = eval_data['probs'].apply( lambda x: ast.literal_eval(x) )
+    eval_data = df.loc[df['split'] == 'eval'][['art_style', 'painting', 'caption', 'probs']].copy()
+    eval_data['probs'] = eval_data['probs'].apply( ast.literal_eval )
     eval_data = MMProcessingDataset( eval_data )
 
     # Delete original DataFrame to free memory

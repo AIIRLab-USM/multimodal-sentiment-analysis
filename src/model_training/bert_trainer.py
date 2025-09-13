@@ -1,5 +1,6 @@
 import os
 import ast
+import numpy as np
 import pandas as pd
 from datasets import Dataset
 from src.classification_models import *
@@ -10,7 +11,7 @@ from src.model_training.training import compute_metrics, get_args, early_stoppin
 A short script for fine-tuning BERT and RoBERTa models for multi-label sentiment classification
 
 Author: Clayton Durepos
-Version: 08.22.2025
+Version: 09.12.2025
 Contact: clayton.durepos@maine.edu
 """
 
@@ -24,12 +25,13 @@ def main():
 
     # Train Data pre-processing
     train_data = df.loc[df['split'] == 'train'][['caption', 'probs']]
-    train_data['probs'] = train_data['probs'].progress_apply( lambda x: ast.literal_eval(x) ) # String to array
+    train_data['probs'] = train_data['probs'].progress_apply( ast.literal_eval ) # String to array
     train_data = Dataset.from_pandas( train_data, preserve_index=False)
 
     # Evaluation Data pre-processing
-    eval_data = df.loc[df['split'] == 'eval'][['caption', 'label', 'probs']].copy()
-    eval_data['probs'] = eval_data['probs'].apply(lambda x: ast.literal_eval(x))
+    eval_data = df.loc[df['split'] == 'eval'][['caption', 'probs']].copy()
+    eval_data['probs'] = eval_data['probs'].apply( ast.literal_eval )
+    eval_data['label'] = eval_data['probs'].apply( np.argmax )
     eval_data = Dataset.from_pandas(eval_data, preserve_index=False)
 
     # Tokenize captions
